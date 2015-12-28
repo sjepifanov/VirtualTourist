@@ -12,7 +12,7 @@ import MapKit
 
 @objc (Pin)
 
-class Pin: NSManagedObject {
+class Pin: NSManagedObject, MKAnnotation {
 	
 	struct Keys {
 		static let Latitude = "latitude"
@@ -20,8 +20,7 @@ class Pin: NSManagedObject {
 		static let Photo = "photo"
 	}
 	
-	@NSManaged var latitude: CLLocationDegrees
-	@NSManaged var longitude: CLLocationDegrees
+	@NSManaged var coordinate: CLLocationCoordinate2D
 	@NSManaged var photos: [Photo]
 	
 	override init(entity: NSEntityDescription, insertIntoManagedObjectContext context: NSManagedObjectContext?) {
@@ -37,11 +36,12 @@ class Pin: NSManagedObject {
 
 		super.init(entity: entity, insertIntoManagedObjectContext: context)
 		
-		latitude = dictionary[Keys.Latitude] as! CLLocationDegrees
-		longitude = dictionary[Keys.Longitude] as! CLLocationDegrees
-		photos = dictionary[Keys.Photo] as! [Photo]
+		guard let latitude = dictionary[Keys.Latitude] as? CLLocationDegrees,
+			let longitude = dictionary[Keys.Longitude] as? CLLocationDegrees else {
+				print("Downcast from dictionary coordinates to CLLocationDegrees failed")
+				return
+		}
 		
+		coordinate = CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
 	}
-	
-	
 }

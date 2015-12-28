@@ -13,7 +13,7 @@ class MapViewController: UIViewController {
 
 	// MARK: - Declarations
 	
-	struct Keys {
+	struct Region {
 		static let Latitude = "latitude"
 		static let Longitude = "longitude"
 		static let LatitudeDelta = "latitudeDelta"
@@ -31,16 +31,31 @@ class MapViewController: UIViewController {
 	}
 	
 	@IBOutlet weak var mapView: MKMapView!
+	@IBOutlet var longPressRecognizer: UILongPressGestureRecognizer!
 	
 	// MARK: - View
 	override func viewDidLoad() {
 		super.viewDidLoad()
 		
+		longPressRecognizer.minimumPressDuration = 1.0
 		// Assign mapView delegate
 		mapView.delegate = self
 		
 		restoreMapRegion(false)
 	}
+	
+	@IBAction func handleLongPress(gestureRecognizer: UILongPressGestureRecognizer) {
+		if gestureRecognizer.state != .Began { return }
+		let touchPoint = gestureRecognizer.locationInView(mapView)
+		let touchMapCoordinate = mapView.convertPoint(touchPoint, toCoordinateFromView: mapView)
+
+		let annotation = MKPointAnnotation()
+
+		annotation.coordinate = touchMapCoordinate
+		
+		mapView.addAnnotation(annotation)
+	}
+	
 	
 	// MARK: - Restore Map Region
 	func restoreMapRegion(animated: Bool) {
@@ -51,24 +66,19 @@ class MapViewController: UIViewController {
 			return
 		}
 		// Downcast dictionary elements to correct type
-		guard let latitude = regionDictionary[Keys.Latitude] as? CLLocationDegrees,
-			let longitude = regionDictionary[Keys.Longitude] as? CLLocationDegrees else {
-				print("Downcast from dictionary coordinate to CLLocationDegrees failed")
-				return
-		}
-		// Downcast dictionary elements to correct type
-		guard let latitudeDelta = regionDictionary[Keys.LatitudeDelta] as? CLLocationDegrees,
-			let longitudeDelta = regionDictionary[Keys.LongitudeDelta] as? CLLocationDegrees else {
-				print("Downcast from dictionary coordinate delta to CLLocationDegrees failed")
+		guard let latitude = regionDictionary[Region.Latitude] as? CLLocationDegrees,
+			let longitude = regionDictionary[Region.Longitude] as? CLLocationDegrees,
+			let latitudeDelta = regionDictionary[Region.LatitudeDelta] as? CLLocationDegrees,
+			let longitudeDelta = regionDictionary[Region.LongitudeDelta] as? CLLocationDegrees else {
+				print("Downcast from dictionary coordinates to CLLocationDegrees failed")
 				return
 		}
 		// Create coordinate region for saved region
 		let center = CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
 		let span = MKCoordinateSpan(latitudeDelta: latitudeDelta, longitudeDelta: longitudeDelta)
 		let savedRegion = MKCoordinateRegion(center: center, span: span)
+		
 		// Set map coordinates for saved region
 		mapView.setRegion(savedRegion, animated: animated)
 	}
 }
-
-
