@@ -17,7 +17,7 @@
 		851050671C2B1CDB0073559D /* Pin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 851050661C2B1CDB0073559D /* Pin.swift */; };
 		851050691C2B1F390073559D /* Photo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 851050681C2B1F380073559D /* Photo.swift */; };
 		8510506C1C3148CA0073559D /* MapKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8510506B1C3148CA0073559D /* MapKit.framework */; };
-		8510506E1C315F4E0073559D /* MapViewControllerDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8510506D1C315F4E0073559D /* MapViewControllerDelegate.swift */; };
+		8510506E1C315F4E0073559D /* MapViewControllerMKMapViewDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8510506D1C315F4E0073559D /* MapViewControllerMKMapViewDelegate.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -33,7 +33,7 @@
 		851050661C2B1CDB0073559D /* Pin.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Pin.swift; sourceTree = "<group>"; };
 		851050681C2B1F380073559D /* Photo.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Photo.swift; sourceTree = "<group>"; };
 		8510506B1C3148CA0073559D /* MapKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MapKit.framework; path = System/Library/Frameworks/MapKit.framework; sourceTree = SDKROOT; };
-		8510506D1C315F4E0073559D /* MapViewControllerDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MapViewControllerDelegate.swift; sourceTree = "<group>"; };
+		8510506D1C315F4E0073559D /* MapViewControllerMKMapViewDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MapViewControllerMKMapViewDelegate.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -95,7 +95,7 @@
 			isa = PBXGroup;
 			children = (
 				851050501C2AF8110073559D /* MapViewController.swift */,
-				8510506D1C315F4E0073559D /* MapViewControllerDelegate.swift */,
+				8510506D1C315F4E0073559D /* MapViewControllerMKMapViewDelegate.swift */,
 			);
 			name = Controller;
 			sourceTree = "<group>";
@@ -183,7 +183,7 @@
 				851050641C2AF8930073559D /* CoreDataStackManager.swift in Sources */,
 				8510504F1C2AF8110073559D /* AppDelegate.swift in Sources */,
 				851050571C2AF8110073559D /* VirtualTourist.xcdatamodeld in Sources */,
-				8510506E1C315F4E0073559D /* MapViewControllerDelegate.swift in Sources */,
+				8510506E1C315F4E0073559D /* MapViewControllerMKMapViewDelegate.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

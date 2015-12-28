@@ -10,17 +10,15 @@ import Foundation
 import CoreData
 import MapKit
 
-@objc (Pin)
-
-class Pin: NSManagedObject, MKAnnotation {
+class Pin: NSManagedObject {
 	
 	struct Keys {
 		static let Latitude = "latitude"
 		static let Longitude = "longitude"
-		static let Photo = "photo"
 	}
 	
-	@NSManaged var coordinate: CLLocationCoordinate2D
+	@NSManaged var latitude: NSNumber
+	@NSManaged var longitude: NSNumber
 	@NSManaged var photos: [Photo]
 	
 	override init(entity: NSEntityDescription, insertIntoManagedObjectContext context: NSManagedObjectContext?) {
@@ -33,15 +31,17 @@ class Pin: NSManagedObject, MKAnnotation {
 			print("Can not initialize Pin entity!")
 			abort()
 		}
-
 		super.init(entity: entity, insertIntoManagedObjectContext: context)
-		
-		guard let latitude = dictionary[Keys.Latitude] as? CLLocationDegrees,
-			let longitude = dictionary[Keys.Longitude] as? CLLocationDegrees else {
-				print("Downcast from dictionary coordinates to CLLocationDegrees failed")
-				return
-		}
-		
-		coordinate = CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+		latitude = dictionary[Keys.Latitude] as! NSNumber
+		longitude = dictionary[Keys.Longitude] as! NSNumber
+	}
+}
+
+
+// MARK: Class Pin extension to conform to MKAnnotation protocol
+
+extension Pin: MKAnnotation {
+	var coordinate: CLLocationCoordinate2D {
+			return CLLocationCoordinate2D(latitude: latitude as CLLocationDegrees, longitude: longitude as CLLocationDegrees)
 	}
 }

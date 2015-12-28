@@ -34,10 +34,8 @@ class Photo: NSManagedObject {
 			abort()
 		}
 		super.init(entity: entity, insertIntoManagedObjectContext: context)
-		
 		title = dictionary[Keys.Title] as! String
 		imagePath = dictionary[Keys.Path] as! String
-		location = dictionary[Keys.Pin] as! [Pin]
 	}
 	
 }
