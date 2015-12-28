@@ -44,6 +44,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 		self.saveContext()
 	}
 
+	
+	// TODO: - Remove from AppDelegate after testing with CoreDataStackManager!
 	// MARK: - Core Data stack
 
 	lazy var applicationDocumentsDirectory: NSURL = {
