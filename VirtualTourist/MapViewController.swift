@@ -73,14 +73,16 @@ class MapViewController: UIViewController {
 		guard let annotation = view.annotation else {
 			return
 		}
-		mapView.selectAnnotation(annotation, animated: false)
 		let latitude = annotation.coordinate.latitude as NSNumber
 		managedObject = getManagedObject(forKey: latitude)
 		guard let pin = managedObject else {
 			return
 		}
+		// should be set as selected automatically no need to set manually
+		// mapView.selectAnnotation(annotation, animated: false)
 		switch editing {
 		case true:
+			// TODO: - Check if emplementing FRC delegates to bulk delete Pin objects will work better
 			sharedContext.deleteObject(pin)
 			mapView.removeAnnotation(annotation)
 			CoreDataStackManager.sharedInstance.saveContext()
@@ -126,7 +128,7 @@ class MapViewController: UIViewController {
 	
 	
 	// MARK: - Helpers
-	// Switch editing state and tapPinstoDelete label
+	// Switch editing state and show tapPinstoDelete label
 	override func setEditing(editing: Bool, animated: Bool) {
 		super.setEditing(editing, animated: animated)
 		// Show/hide TapPinstoDelete label according to editing state.
@@ -136,6 +138,25 @@ class MapViewController: UIViewController {
 		} else {
 			mapView.frame.origin.y -= tapPinstoDelete.frame.height
 		}
+	}
+	
+	// NSKeyedArchiver
+	// Save Map Region
+	func saveMapRegion() {
+		guard let filePath = filePath else {
+			return
+		}
+		// Place the "center" and "span" of the map into a dictionary
+		// The "span" is the width and height of the map in degrees.
+		// It represents the zoom level of the map.
+		let dictionary = [
+			Keys.Latitude: mapView.region.center.latitude as NSNumber,
+			Keys.Longitude: mapView.region.center.longitude as NSNumber,
+			Keys.LatitudeDelta: mapView.region.span.latitudeDelta as NSNumber,
+			Keys.LongitudeDelta: mapView.region.span.longitudeDelta as NSNumber
+		]
+		// Archive the dictionary into the filePath
+		NSKeyedArchiver.archiveRootObject(dictionary, toFile: filePath)
 	}
 	
 	// NSKeyedUnarchiver
@@ -166,7 +187,7 @@ class MapViewController: UIViewController {
 		mapView.setRegion(region, animated: animated)
 	}
 	
-	// Fetch results.
+	// Fetch Pins.
 	func fetchPins() -> Bool {
 		do {
 			try fetchedResultsController.performFetch()
@@ -176,6 +197,21 @@ class MapViewController: UIViewController {
 		}
 		print(fetchedResultsController.fetchedObjects?.first)
 		return true
+	}
+	
+	// Get managed object for Key by executing fetch with predicate
+	func getManagedObject(forKey latitude: NSNumber) -> Pin? {
+		do {
+			fetchedResultsController.fetchRequest.fetchLimit = 1
+			fetchedResultsController.fetchRequest.predicate = NSPredicate(format: "latitude = %@", latitude)
+			try fetchedResultsController.performFetch()
+		} catch {
+			return nil
+		}
+		guard let fetchedObject = fetchedResultsController.fetchedObjects?.first as? Pin else {
+			return nil
+		}
+		return fetchedObject
 	}
 	
 	// Create Annotations Array
@@ -193,7 +229,6 @@ class MapViewController: UIViewController {
 			annotation.coordinate = coordinate
 			annotations.append(annotation)
 		}
-		// Return annotations
 		return annotations
 	}
 }

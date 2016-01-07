@@ -11,23 +11,40 @@ import UIKit
 import CoreData
 
 class PinDetailViewController: UIViewController {
-	
+
+	let cellIdentifier = "PinPhotoCollectionCell"
 	var location: Pin? = nil
-	var photos: [[String : AnyObject]]? = nil
+	var photos: [Photo]? = nil
+	// temporary array to keep selected objects for deletion. may no be needed with FRC!
+	var objectsToDelete = [Photo]()
+	
+	// initializing array of NSBlockOperation to control collectionView objects deletion/updates 
+	// used in PinDetailViewControllerFRCDelegate
+	var blockOperations: [NSBlockOperation] = []
 	
 	// delegate and data source delegate set in storyboard to PinDetailViewController
-	// depending on complexity separate to different files
+	// TODO: - depending on complexity separate to different files
 	@IBOutlet weak var collectionView: UICollectionView!
+	
+	override func viewDidLoad() {
+		super.viewDidLoad()
+		// enable multiple cells selection
+		collectionView.allowsMultipleSelection = true
+		
+		getPhotos()
+	}
+	
+	override func viewWillDisappear(animated: Bool) {
+		// Deselect cells
+		collectionView.selectItemAtIndexPath(nil, animated: true, scrollPosition: .None)
+	}
 	
 	// MARK: - Core Data Convenience
 	lazy var sharedContext: NSManagedObjectContext =  {
 		return CoreDataStackManager.sharedInstance.managedObjectContext
 	}()
-	func saveContext() {
-		CoreDataStackManager.sharedInstance.saveContext()
-	}
+	
 	lazy var fetchedResultsController: NSFetchedResultsController = {
-		
 		let fetchRequest = NSFetchRequest(entityName: "Photo")
 		fetchRequest.sortDescriptors = [NSSortDescriptor(key: "title", ascending: true)]
 		
@@ -36,19 +53,20 @@ class PinDetailViewController: UIViewController {
 		return fetchResultController
 	}()
 	
-	override func viewDidLoad() {
-		super.viewDidLoad()
-		getPhotos()
+	func saveContext() {
+		CoreDataStackManager.sharedInstance.saveContext()
 	}
 	
+	// MARK: - Methods
 	// TODO: - break to modules with ability to configure parameters.
 	func getPhotos() {
-		guard let latitude = location?.valueForKey(Pin.Keys.Latitude) as? Double,
-			let longitude = location?.valueForKey(Pin.Keys.Longitude) as? Double else {
+		guard let lat = location?.valueForKey(Pin.Keys.Latitude) as? Double,
+			lon = location?.valueForKey(Pin.Keys.Longitude) as? Double else {
 				print("No Pin!")
 				return
 		}
-		FlickrManager.sharedInstance.getFlickrPlaceIdByLatLon(latitude, longitude: longitude) { data, error in
+		
+		FlickrManager.sharedInstance.getFlickrPlaceIdByLatLon(lat, longitude: lon) { data, error in
 			guard let placeId = data as? String else {
 				print("PlaceId. Error: \(error)")
 				return
@@ -70,12 +88,43 @@ class PinDetailViewController: UIViewController {
 						photo.location = self.location!
 						return photo
 					}
+					
 					CoreDataStackManager.sharedInstance.saveContext()
+					
 					print("Got photos!")
 					print("Photos count: \(photos.count)")
 					print("Pin photos: \(self.location?.photos.count)")
 					print("Pin photos path: \(self.location?.photos)")
 				}
+			}
+		}
+	}
+	
+	// MARK: - Collection view helpers
+	
+	func deleteSelection() {
+		// Get selected items paths from collection View
+		// Unwrapping here is not really necessary as .indexPathsForSelectedItems() returns empty array if no rows are selected and not nil.
+		if let selectedRows = collectionView.indexPathsForSelectedItems() as [NSIndexPath]? {
+			// Check if rows are selected
+			if !selectedRows.isEmpty {
+				// Create temporary array of selected items
+				for selectedRow in selectedRows{
+					objectsToDelete.append(photos![selectedRow.row])
+				}
+				// Find objects from temporary array in data source and delete them
+				for object in objectsToDelete {
+					if let index = photos!.indexOf(object){
+						photos!.removeAtIndex(index)
+					}
+				}
+				collectionView.deleteItemsAtIndexPaths(selectedRows)
+				// Clear temporary array just in case
+				objectsToDelete.removeAll(keepCapacity: false)
+			}else{
+				// Delete everything, delete the objects from data model.
+				photos!.removeAll(keepCapacity: false)
+				collectionView.reloadSections(NSIndexSet(index: 0))
 			}
 		}
 	}

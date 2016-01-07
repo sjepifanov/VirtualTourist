@@ -43,6 +43,7 @@ extension MapViewController: MKMapViewDelegate {
 		guard let annotation = view.annotation else {
 			return
 		}
+		
 		switch newState {
 		case .Starting:
 			let latitude = annotation.coordinate.latitude as NSNumber
@@ -59,9 +60,9 @@ extension MapViewController: MKMapViewDelegate {
 		default:
 			break
 		}
-		
 	}
 	
+	// remove unused delegates
 	func mapView(mapView: MKMapView, didAddAnnotationViews views: [MKAnnotationView]) {
 		print("view added")
 	}
@@ -76,39 +77,5 @@ extension MapViewController: MKMapViewDelegate {
 	
 	func mapView(mapView: MKMapView, didDeselectAnnotationView view: MKAnnotationView) {
 		print("deselect annotation")
-	}
-	
-	// MARK: - Helpers
-	// Save Map Region
-	func saveMapRegion() {
-		guard let filePath = filePath else {
-			return
-		}
-		// Place the "center" and "span" of the map into a dictionary
-		// The "span" is the width and height of the map in degrees.
-		// It represents the zoom level of the map.
-		let dictionary = [
-			Keys.Latitude: mapView.region.center.latitude as NSNumber,
-			Keys.Longitude: mapView.region.center.longitude as NSNumber,
-			Keys.LatitudeDelta: mapView.region.span.latitudeDelta as NSNumber,
-			Keys.LongitudeDelta: mapView.region.span.longitudeDelta as NSNumber
-		]
-		// Archive the dictionary into the filePath
-		NSKeyedArchiver.archiveRootObject(dictionary, toFile: filePath)
-	}
-	
-	// Get managed object for Key by executing fetch with predicate
-	func getManagedObject(forKey latitude: NSNumber) -> Pin? {
-		do {
-			fetchedResultsController.fetchRequest.fetchLimit = 1
-			fetchedResultsController.fetchRequest.predicate = NSPredicate(format: "latitude = %@", latitude)
-			try fetchedResultsController.performFetch()
-		} catch {
-			return nil
-		}
-		guard let fetchedObject = fetchedResultsController.fetchedObjects?.first as? Pin else {
-			return nil
-		}
-		return fetchedObject
 	}
 }
