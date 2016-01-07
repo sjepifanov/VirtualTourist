@@ -17,6 +17,11 @@ class Pin: NSManagedObject {
 		static let Longitude = "longitude"
 	}
 	
+	// Initilalize private var innerCoordinates.
+	// We will use it in Pin class extension for conformance with MKAnnotation protocol
+	private var innerCoordinate = CLLocationCoordinate2D(latitude: 0,longitude: 0)
+	
+	// Managed values
 	@NSManaged var latitude: NSNumber
 	@NSManaged var longitude: NSNumber
 	@NSManaged var photos: [Photo]
@@ -25,23 +30,28 @@ class Pin: NSManagedObject {
 		super.init(entity: entity, insertIntoManagedObjectContext: context)
 	}
 	
-	init(dictionary: [String: AnyObject], context: NSManagedObjectContext) {
+	init(dictionary: [String : NSNumber], context: NSManagedObjectContext) {
 		guard let entity = NSEntityDescription.entityForName("Pin", inManagedObjectContext: context) else {
 			// TODO - Add proper error handling!
-			print("Can not initialize Pin entity!")
-			abort()
+			fatalError("Can not initialize Pin entity!")
 		}
 		super.init(entity: entity, insertIntoManagedObjectContext: context)
-		latitude = dictionary[Keys.Latitude] as! NSNumber
-		longitude = dictionary[Keys.Longitude] as! NSNumber
+		guard let lat = dictionary[Keys.Latitude],
+			lon = dictionary[Keys.Longitude] else {
+				return
+		}
+		latitude = lat
+		longitude = lon
+		innerCoordinate = CLLocationCoordinate2D(latitude: latitude as CLLocationDegrees, longitude: longitude as CLLocationDegrees )
 	}
 }
 
-
-// MARK: Class Pin extension to conform to MKAnnotation protocol
-
 extension Pin: MKAnnotation {
+	// Conformance to MKAnnotation protocol
 	var coordinate: CLLocationCoordinate2D {
-			return CLLocationCoordinate2D(latitude: latitude as CLLocationDegrees, longitude: longitude as CLLocationDegrees)
+		return innerCoordinate
+	}
+	func setCoordinate(newCoordinate: CLLocationCoordinate2D) {
+		innerCoordinate = newCoordinate
 	}
 }

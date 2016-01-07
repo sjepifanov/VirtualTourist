@@ -9,33 +9,27 @@
 import Foundation
 import CoreData
 
-@objc (Photo)
-
 class Photo: NSManagedObject {
 	
 	struct Keys {
-		static let Title = "title"
-		static let Path = "imagePath"
-		static let Pin = "location"
+		static let imageURL = "imageURL"
 	}
 	
-	@NSManaged var title: String
-	@NSManaged var imagePath: String
-	@NSManaged var location: [Pin]
+	@NSManaged var imageURL: NSString
+	@NSManaged var location: Pin
 	
 	override init(entity: NSEntityDescription, insertIntoManagedObjectContext context: NSManagedObjectContext?) {
 		super.init(entity: entity, insertIntoManagedObjectContext: context)
 	}
 	
-	init (dictionary: [String:AnyObject], context: NSManagedObjectContext) {
+	init (dictionary: [String : NSString] , context: NSManagedObjectContext) {
 		guard let entity = NSEntityDescription.entityForName("Photo", inManagedObjectContext: context) else {
-			// TODO: - Handle the error properly!
-			print("Unable to load context")
-			abort()
+			fatalError("Unable to load context")
 		}
 		super.init(entity: entity, insertIntoManagedObjectContext: context)
-		title = dictionary[Keys.Title] as! String
-		imagePath = dictionary[Keys.Path] as! String
+		guard let path = dictionary[Keys.imageURL] else {
+			return
+		}
+		self.imageURL = path
 	}
-	
 }
