@@ -11,14 +11,14 @@ import UIKit
 import CoreData
 
 class PinDetailViewController: UIViewController {
-
+	
 	let cellIdentifier = "PinPhotoCollectionCell"
 	var location: Pin? = nil
 	var photos: [Photo]? = nil
 	// temporary array to keep selected objects for deletion. may no be needed with FRC!
 	var objectsToDelete = [Photo]()
 	
-	// initializing array of NSBlockOperation to control collectionView objects deletion/updates 
+	// initializing array of NSBlockOperation to control collectionView objects deletion/updates
 	// used in PinDetailViewControllerFRCDelegate
 	var blockOperations: [NSBlockOperation] = []
 	
@@ -90,11 +90,6 @@ class PinDetailViewController: UIViewController {
 					}
 					
 					CoreDataStackManager.sharedInstance.saveContext()
-					
-					print("Got photos!")
-					print("Photos count: \(photos.count)")
-					print("Pin photos: \(self.location?.photos.count)")
-					print("Pin photos path: \(self.location?.photos)")
 				}
 			}
 		}
@@ -103,29 +98,33 @@ class PinDetailViewController: UIViewController {
 	// MARK: - Collection view helpers
 	
 	func deleteSelection() {
-		// Get selected items paths from collection View
-		// Unwrapping here is not really necessary as .indexPathsForSelectedItems() returns empty array if no rows are selected and not nil.
-		if let selectedRows = collectionView.indexPathsForSelectedItems() as [NSIndexPath]? {
-			// Check if rows are selected
-			if !selectedRows.isEmpty {
-				// Create temporary array of selected items
-				for selectedRow in selectedRows{
-					objectsToDelete.append(photos![selectedRow.row])
-				}
-				// Find objects from temporary array in data source and delete them
-				for object in objectsToDelete {
-					if let index = photos!.indexOf(object){
-						photos!.removeAtIndex(index)
-					}
-				}
-				collectionView.deleteItemsAtIndexPaths(selectedRows)
-				// Clear temporary array just in case
-				objectsToDelete.removeAll(keepCapacity: false)
-			}else{
-				// Delete everything, delete the objects from data model.
-				photos!.removeAll(keepCapacity: false)
-				collectionView.reloadSections(NSIndexSet(index: 0))
+		// TODO: - verify deletion in accordance with FRC!!!
+		
+		// Get selected items paths from collectionView
+		// If no items selected assume New Collection is requested.
+		// Delete all current objects and reload collectionView/request new collection
+		guard let selectedRows = collectionView.indexPathsForSelectedItems() as [NSIndexPath]? else {
+			// Delete everything, delete the objects from data model.
+			photos?.removeAll(keepCapacity: false)
+			collectionView.reloadSections(NSIndexSet(index: 0))
+			// TODO: - possibliy add request to get new photos or move to other function (requestNewCollection)
+			return
+		}
+		// If some photos are selected - cfeate an array for deletion and remove selected photos
+		if !selectedRows.isEmpty {
+			// Create temporary array of selected items
+			for selectedRow in selectedRows {
+				objectsToDelete.append(photos![selectedRow.row])
 			}
+			// Find objects from temporary array in data source and delete them
+			for object in objectsToDelete {
+				if let index = photos?.indexOf(object){
+					photos?.removeAtIndex(index)
+				}
+			}
+			collectionView.deleteItemsAtIndexPaths(selectedRows)
+			// Clear temporary array
+			objectsToDelete.removeAll(keepCapacity: false)
 		}
 	}
 }

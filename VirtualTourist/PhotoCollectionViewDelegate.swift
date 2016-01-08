@@ -17,19 +17,19 @@ extension PinDetailViewController: UICollectionViewDelegate, UICollectionViewDat
 	
 	func collectionView(collectionView: UICollectionView, cellForItemAtIndexPath indexPath: NSIndexPath) -> UICollectionViewCell {
 		let cell = collectionView.dequeueReusableCellWithReuseIdentifier(cellIdentifier, forIndexPath: indexPath) as! PinDetailViewCell
+		// check if cell is selected and set alpha appropriatelly. otherwise reused cells may appear as selected though actually not
+		cell.selected ? (cell.alpha = 0.5) : (cell.alpha = 1.0)
 		
-		if cell.selected {
-			cell.alpha = 0.5
-		} else {
-			cell.alpha = 1.0 }
-		
-		// add image
+		// add image to cell
 		
 		return cell
 	}
 	
 	func collectionView(collectionView: UICollectionView, didSelectItemAtIndexPath indexPath: NSIndexPath) {
-		if let cell = collectionView.cellForItemAtIndexPath(indexPath){
+		
+		// TODO: - when at least one item is selected update UIButton title to "Delete Photos"(implement)
+		
+		if let cell = collectionView.cellForItemAtIndexPath(indexPath) {
 			cell.alpha = 0.5
 		}
 	}

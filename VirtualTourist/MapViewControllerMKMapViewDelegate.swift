@@ -43,7 +43,6 @@ extension MapViewController: MKMapViewDelegate {
 		guard let annotation = view.annotation else {
 			return
 		}
-		
 		switch newState {
 		case .Starting:
 			let latitude = annotation.coordinate.latitude as NSNumber

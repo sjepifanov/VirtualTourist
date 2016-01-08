@@ -6,7 +6,6 @@
 //  Copyright © 2015 Sergei. All rights reserved.
 //
 
-import Foundation
 import CoreData
 import SystemConfiguration
 
@@ -55,6 +54,7 @@ public class FlickrManager {
 		return parsedData
 	}
 	
+	// Taken from http://stackoverflow.com/questions/27148100/how-to-escape-the-http-params-in-swift/27151324#27151324
 	private func dictionaryToQueryString(dictionary: [String : AnyObject]) -> String {
 		let queryItems = dictionary.map { NSURLQueryItem(name: $0, value: $1 as? String) }
 		let components = NSURLComponents()
@@ -81,7 +81,9 @@ public class FlickrManager {
 		}
 		return NSMutableURLRequest(URL: url)
 	}
-
+	
+	// Taken from Mastering Swift 2.0 book - https://www.packtpub.com/application-development/mastering-swift-2
+	// TODO: - Implement!
 	// Check Network Connection
 	public enum ConnectionType {
 		case NONETWORK

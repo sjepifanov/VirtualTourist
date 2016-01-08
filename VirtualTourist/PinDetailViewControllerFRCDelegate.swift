@@ -19,16 +19,6 @@ extension PinDetailViewController: NSFetchedResultsControllerDelegate {
 	func controllerWillChangeContent(controller: NSFetchedResultsController) {
 		blockOperations.removeAll(keepCapacity: false)	}
 	
-	func controllerDidChangeContent(controller: NSFetchedResultsController) {
-		collectionView.performBatchUpdates({ () -> Void in
-			for operation in self.blockOperations {
-				operation.start()
-			}
-			}, completion: { (finished) -> Void in
-				self.blockOperations.removeAll(keepCapacity: false)
-		})
-	}
-	
 	func controller(controller: NSFetchedResultsController, didChangeSection sectionInfo: NSFetchedResultsSectionInfo, atIndex sectionIndex: Int, forChangeType type: NSFetchedResultsChangeType) {
 		switch type {
 		case .Insert:
@@ -54,5 +44,17 @@ extension PinDetailViewController: NSFetchedResultsControllerDelegate {
 		case .Delete:
 			addBlockOperation { self.collectionView.deleteItemsAtIndexPaths([indexPath!]) }
 		}
+	}
+	
+	func controllerDidChangeContent(controller: NSFetchedResultsController) {
+		collectionView.performBatchUpdates({ () -> Void in
+			for operation in self.blockOperations {
+				operation.start()
+			}
+			}, completion: { (finished) -> Void in
+				self.blockOperations.removeAll(keepCapacity: false)
+				// Verify if I need to saveContext here or later
+				// CoreDataStackManager.sharedInstance.saveContext()
+		})
 	}
 }

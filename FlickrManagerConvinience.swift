@@ -20,6 +20,7 @@ extension FlickrManager {
 		guard let request = FlickrManager.sharedInstance.prepareRequest(methodArguments) else {
 			return handler(nil, "Error preparng request")
 		}
+		// TODO: - check if WOE produce more results than PlaceID. Use accrodingly.
 		FlickrManager.sharedInstance.sendRequest(request) { data, error in
 			guard let data = data else {
 				return handler(nil, error)
@@ -63,8 +64,6 @@ extension FlickrManager {
 		print("Tags String: \(tagsString)")
 		let methodArguments = [
 			MethodArguments.Method : Keys.MethodSearch,
-			//"tag_mode" : "any",
-			//"tags" : "seened,fungi,imbivahuri,polyporales,torikulaadsed,taelikulised,basidiomycota,taelikulaadsed,onnia,hymenochaetales,hymenochaetaceae,kandseened,phlebia,pess,lehternahkiselised,vammik,vaabikulised,thelephorales,lehternahkis,vaabik",
 			"place_id" : placeId,
 			"min_upload_date" : "2005-01-01"
 		]

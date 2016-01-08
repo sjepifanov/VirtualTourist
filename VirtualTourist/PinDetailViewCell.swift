@@ -10,5 +10,5 @@ import Foundation
 import UIKit
 
 class PinDetailViewCell: UICollectionViewCell {
-	
+	@IBOutlet weak var activityIndicator: UIActivityIndicatorView!
 }

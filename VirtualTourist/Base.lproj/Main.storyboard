@@ -112,9 +112,21 @@
                                         <view key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center">
                                             <rect key="frame" x="0.0" y="0.0" width="50" height="50"/>
                                             <autoresizingMask key="autoresizingMask"/>
+                                            <subviews>
+                                                <activityIndicatorView opaque="NO" contentMode="scaleToFill" horizontalHuggingPriority="750" verticalHuggingPriority="750" style="gray" translatesAutoresizingMaskIntoConstraints="NO" id="Q11-Yb-M7I">
+                                                    <rect key="frame" x="15" y="15" width="20" height="20"/>
+                                                </activityIndicatorView>
+                                            </subviews>
                                             <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="calibratedWhite"/>
                                         </view>
+                                        <constraints>
+                                            <constraint firstItem="Q11-Yb-M7I" firstAttribute="centerY" secondItem="5Af-Wi-TDD" secondAttribute="centerY" id="5Bt-UM-MWG"/>
+                                            <constraint firstItem="Q11-Yb-M7I" firstAttribute="centerX" secondItem="5Af-Wi-TDD" secondAttribute="centerX" id="ixd-rl-r33"/>
+                                        </constraints>
                                         <size key="customSize" width="50" height="50"/>
+                                        <connections>
+                                            <outlet property="activityIndicator" destination="Q11-Yb-M7I" id="uoj-jE-TjZ"/>
+                                        </connections>
                                     </collectionViewCell>
                                 </cells>
                                 <connections>
