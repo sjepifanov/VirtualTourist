@@ -12,7 +12,7 @@ import CoreData
 
 extension PinDetailViewController: NSFetchedResultsControllerDelegate {
 	
-	private func addBlockOperation(processingBlock: () -> Void) {
+	private func addBlockOperations(processingBlock: () -> Void) {
 		blockOperations.append(NSBlockOperation(block: processingBlock))
 	}
 	
@@ -22,27 +22,27 @@ extension PinDetailViewController: NSFetchedResultsControllerDelegate {
 	func controller(controller: NSFetchedResultsController, didChangeSection sectionInfo: NSFetchedResultsSectionInfo, atIndex sectionIndex: Int, forChangeType type: NSFetchedResultsChangeType) {
 		switch type {
 		case .Insert:
-			addBlockOperation { self.collectionView.insertSections(NSIndexSet(index: sectionIndex)) }
+			addBlockOperations { self.collectionView.insertSections(NSIndexSet(index: sectionIndex)) }
 		case .Update:
-			addBlockOperation { self.collectionView.reloadSections(NSIndexSet(index: sectionIndex)) }
+			addBlockOperations { self.collectionView.reloadSections(NSIndexSet(index: sectionIndex)) }
 		case .Move:
 			// not implemented
 			break
 		case .Delete:
-			addBlockOperation { self.collectionView.deleteSections(NSIndexSet(index: sectionIndex)) }
+			addBlockOperations { self.collectionView.deleteSections(NSIndexSet(index: sectionIndex)) }
 		}
 	}
 	
 	func controller(controller: NSFetchedResultsController, didChangeObject anObject: AnyObject, atIndexPath indexPath: NSIndexPath?, forChangeType type: NSFetchedResultsChangeType, newIndexPath: NSIndexPath?) {
 		switch type {
 		case .Insert:
-			addBlockOperation { self.collectionView.insertItemsAtIndexPaths([newIndexPath!]) }
+			addBlockOperations { self.collectionView.insertItemsAtIndexPaths([newIndexPath!]) }
 		case .Update:
-			addBlockOperation { self.collectionView.reloadItemsAtIndexPaths([newIndexPath!]) }
+			addBlockOperations { self.collectionView.reloadItemsAtIndexPaths([newIndexPath!]) }
 		case .Move:
-			addBlockOperation { self.collectionView.moveItemAtIndexPath(indexPath!, toIndexPath: newIndexPath!) }
+			addBlockOperations { self.collectionView.moveItemAtIndexPath(indexPath!, toIndexPath: newIndexPath!) }
 		case .Delete:
-			addBlockOperation { self.collectionView.deleteItemsAtIndexPaths([indexPath!]) }
+			addBlockOperations { self.collectionView.deleteItemsAtIndexPaths([indexPath!]) }
 		}
 	}
 	
@@ -53,8 +53,7 @@ extension PinDetailViewController: NSFetchedResultsControllerDelegate {
 			}
 			}, completion: { (finished) -> Void in
 				self.blockOperations.removeAll(keepCapacity: false)
-				// Verify if I need to saveContext here or later
-				// CoreDataStackManager.sharedInstance.saveContext()
+				CoreDataStackManager.sharedInstance.saveContext()
 		})
 	}
 }

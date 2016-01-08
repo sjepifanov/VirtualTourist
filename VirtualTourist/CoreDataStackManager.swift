@@ -36,7 +36,9 @@ class CoreDataStackManager {
 		
 		// Grab all of the possible locations for the documents directory and select the last one from the returned array.
 		let urls = NSFileManager.defaultManager().URLsForDirectory(.DocumentDirectory, inDomains: .UserDomainMask)
-		let storeURL = (urls[urls.count - 1]).URLByAppendingPathComponent("PinsAndPhotos.sqlite")
+		guard let storeURL = urls.last?.URLByAppendingPathComponent("PinsAndPhotos.sqlite") else {
+			fatalError("Error initializing file path from: \(urls)")
+		}
 		
 		// With a location ask the NSPersistentStoreCoordinator to add a store for that location.
 		// Call the method addPersistentStoreWithType on the NSPersistentStoreCoordinator and get back either a NSPersistentStore or nothing.

@@ -195,7 +195,6 @@ class MapViewController: UIViewController {
 			print("Perform fetch. Unresolved error \(error)")
 			return false
 		}
-		print(fetchedResultsController.fetchedObjects?.first)
 		return true
 	}
 	
@@ -220,14 +219,12 @@ class MapViewController: UIViewController {
 		guard let locations = fetchedResultsController.fetchedObjects as? [Pin] else {
 			return []
 		}
-		// Initialize empty annotations array
-		var annotations: [MKPointAnnotation] = []
 		// Add annotations to array
-		for location in locations {
+		let annotations = locations.map { (location: (Pin)) -> MKPointAnnotation in
 			let coordinate = CLLocationCoordinate2D(latitude: location.latitude as CLLocationDegrees, longitude: location.longitude as CLLocationDegrees)
 			let annotation = MKPointAnnotation()
 			annotation.coordinate = coordinate
-			annotations.append(annotation)
+			return annotation
 		}
 		return annotations
 	}

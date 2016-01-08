@@ -10,35 +10,58 @@ import Foundation
 
 extension FlickrManager {
 	
-	func getFlickrPlaceIdByLatLon(latitude: Double, longitude: Double, handler: completionClosure) {
+	func getFlickrPhotosForLocation(latitude latitude: NSNumber, longitude: NSNumber, handler: completionClosure){
 		let methodArguments = [
-			MethodArguments.Method : Keys.MethodPlacesByLatLon,
+			MethodArguments.Method : Keys.PhotosForLocation,
+			MethodArguments.Accuracy : Keys.AccuracyStreet,
+			//MethodArguments.PerPage : "21",
 			MethodArguments.Latitude : String(latitude),
-			MethodArguments.Longitude : String(longitude),
-			"accuracy" : "16"
+			MethodArguments.Longitude : String(longitude)
 		]
 		guard let request = FlickrManager.sharedInstance.prepareRequest(methodArguments) else {
 			return handler(nil, "Error preparng request")
 		}
-		// TODO: - check if WOE produce more results than PlaceID. Use accrodingly.
 		FlickrManager.sharedInstance.sendRequest(request) { data, error in
 			guard let data = data else {
 				return handler(nil, error)
 			}
-			guard let place = data.valueForKey("places")?.valueForKey("place") as? [[String : AnyObject]] else {
+			guard let photos = data.valueForKey(Keys.Photos)?.valueForKey(Keys.Photo) as? [[String : AnyObject]] else {
+				return handler(nil, "No photos found.")
+			}
+			
+			handler(photos, nil)
+		}
+	}
+	
+	func getFlickrPlaceIdByLatLon(latitude latitude: NSNumber, longitude: NSNumber, handler: completionClosure) {
+		let methodArguments = [
+			MethodArguments.Method : Keys.FindByLatLon,
+			MethodArguments.Accuracy : Keys.AccuracyStreet,
+			MethodArguments.Latitude : String(latitude),
+			MethodArguments.Longitude : String(longitude)
+		]
+		guard let request = FlickrManager.sharedInstance.prepareRequest(methodArguments) else {
+			return handler(nil, "Error preparng request")
+		}
+		FlickrManager.sharedInstance.sendRequest(request) { data, error in
+			guard let data = data else {
+				return handler(nil, error)
+			}
+			guard let place = data.valueForKey(Keys.Places)?.valueForKey(Keys.Place) as? [[String : AnyObject]] else {
 				return handler(nil, "No Places found for location.")
 			}
-			guard let placeId = place.first?["woeid"] as? String else {
+			guard let placeId = place.first?[Keys.PlaceID] as? String else {
 				return handler(nil, "No PlaceId found for location.")
 			}
+			
 			handler(placeId, nil)
 		}
 	}
 	
 	func getFlickrTagsForPlace(placeId: String, handler: completionClosure) {
 		let methodArguments = [
-			MethodArguments.Method : "flickr.places.tagsForPlace",
-			"place_id" : placeId
+			MethodArguments.Method : Keys.TagsForPlace,
+			MethodArguments.PlaceID : placeId
 		]
 		guard let request = FlickrManager.sharedInstance.prepareRequest(methodArguments) else {
 			return handler(nil, "Error Preparing request")
@@ -47,25 +70,27 @@ extension FlickrManager {
 			guard let data = data else {
 				return handler(nil, error)
 			}
-			guard let tags = data.valueForKey("tags")?.valueForKey("tag") as? [[String : AnyObject]] else {
+			guard let tags = data.valueForKey(Keys.Tags)?.valueForKey(Keys.Tag) as? [[String : AnyObject]] else {
 				return handler(nil, "No Tags found for location")
 			}
 			let regEx = "^[a-zA-Z0-9]*$"
 			let plainTags = tags
-				.map { $0["_content"] as? String }
-				.filter { $0?.rangeOfString(regEx, options: .RegularExpressionSearch) != nil }
-				.flatMap { $0 }
+				.prefix(20) // Get first 20 elements or whole array if less
+				.map { $0[Keys.Content] as? String } // create array of tag names
+				.filter { $0?.rangeOfString(regEx, options: .RegularExpressionSearch) != nil } // filter out names with non AlphaNumeric characters
+				.flatMap { $0 } // unwrap optionals, remove nil values
+				.joinWithSeparator(",") // create string of names separated with ","
+			
 			handler(plainTags, nil)
 		}
 	}
 	
-	func getFlickPhotosForTags(tags: [String], placeId: String, handler: completionClosure) {
-		let tagsString = tags.joinWithSeparator(",")
-		print("Tags String: \(tagsString)")
+	func getFlickPhotosForTags(tags: String, placeId: String, handler: completionClosure) {
 		let methodArguments = [
-			MethodArguments.Method : Keys.MethodSearch,
-			"place_id" : placeId,
-			"min_upload_date" : "2005-01-01"
+			MethodArguments.Method : Keys.Search,
+			MethodArguments.MinUploadDat : Keys.Date,
+			MethodArguments.Tags : tags,
+			MethodArguments.PlaceID : placeId
 		]
 		guard let request = prepareRequest(methodArguments) else {
 			return handler(nil, "Error preparing request")
@@ -74,9 +99,10 @@ extension FlickrManager {
 			guard let data = data else {
 				return handler(nil, error)
 			}
-			guard let photos = data.objectForKey("photos")?.valueForKey("photo") as? [[String : AnyObject]] else {
+			guard let photos = data.valueForKey(Keys.Photos)?.valueForKey(Keys.Photo) as? [[String : AnyObject]] else {
 				return handler(nil, "No photos found.")
 			}
+			
 			handler(photos, nil)
 		}
 	}

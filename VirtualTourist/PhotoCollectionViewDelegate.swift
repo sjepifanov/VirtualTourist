@@ -12,7 +12,7 @@ extension PinDetailViewController: UICollectionViewDelegate, UICollectionViewDat
 	
 	func collectionView(collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
 		// replace with actual data
-		return 1
+		return location?.photos.count ?? 0
 	}
 	
 	func collectionView(collectionView: UICollectionView, cellForItemAtIndexPath indexPath: NSIndexPath) -> UICollectionViewCell {
