@@ -11,4 +11,6 @@ import UIKit
 
 class PinDetailViewCell: UICollectionViewCell {
 	@IBOutlet weak var activityIndicator: UIActivityIndicatorView!
+	
+	@IBOutlet weak var cellImageView: UIImageView!
 }

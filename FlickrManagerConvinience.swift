@@ -47,7 +47,8 @@ extension FlickrManager {
 			guard let data = data else {
 				return handler(nil, error)
 			}
-			guard let place = data.valueForKey(Keys.Places)?.valueForKey(Keys.Place) as? [[String : AnyObject]] else {
+			//guard let place = data.valueForKey(Keys.Places)?.valueForKey(Keys.Place) as? [[String : AnyObject]] else {
+			guard let place = data.valueForKeyPath(Keys.Places + "." + Keys.Place) as? [[String : AnyObject]] else {
 				return handler(nil, "No Places found for location.")
 			}
 			guard let placeId = place.first?[Keys.PlaceID] as? String else {
@@ -106,4 +107,45 @@ extension FlickrManager {
 			handler(photos, nil)
 		}
 	}
+	
+	// currently using
+	func getFlickPhotosForPlaceId(placeId: String, handler: completionClosure) {
+		let methodArguments = [
+			MethodArguments.Method : Keys.Search,
+			MethodArguments.MinUploadDat : Keys.Date,
+			MethodArguments.PlaceID : placeId
+		]
+		guard let request = prepareRequest(methodArguments) else {
+			return handler(nil, "Error preparing request")
+		}
+		FlickrManager.sharedInstance.sendRequest(request) { data, error in
+			guard let data = data else {
+				return handler(nil, error)
+			}
+			guard let photos = data.valueForKeyPath(Keys.Photos + "." + Keys.Photo) as? [[String : AnyObject]] else {
+				return handler(nil, "No photos found.")
+			}
+			
+			handler(photos, nil)
+		}
+	}
+	
+	func getFlickrPhoto(url: NSString, handler: (imageData: NSData?, error: String?) -> Void) {
+		let url = NSURL(string: url as String)
+		print(url)
+		let request = NSMutableURLRequest(URL: url!)
+		FlickrManager.sharedInstance.downloadImage(request) {data, error in
+			guard let data = data as? NSData else {
+				return handler(imageData: nil, error: error)
+			}
+			handler(imageData: data, error: nil)
+		}
+	}
+	
+	
+	
+	
+	
+	
+//EOC
 }

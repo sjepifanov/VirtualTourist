@@ -16,11 +16,15 @@ extension PinDetailViewController: UICollectionViewDelegate, UICollectionViewDat
 	}
 	
 	func collectionView(collectionView: UICollectionView, cellForItemAtIndexPath indexPath: NSIndexPath) -> UICollectionViewCell {
+		let photo = fetchedResultsController.objectAtIndexPath(indexPath) as! Photo
 		let cell = collectionView.dequeueReusableCellWithReuseIdentifier(cellIdentifier, forIndexPath: indexPath) as! PinDetailViewCell
 		// check if cell is selected and set alpha appropriatelly. otherwise reused cells may appear as selected though actually not
 		cell.selected ? (cell.alpha = 0.5) : (cell.alpha = 1.0)
-		
 		// add image to cell
+		FlickrManager.sharedInstance.getFlickrPhoto(photo.imageURL) {data, error in
+			let image = UIImage(data: data!)
+			Queue.Main.execute { cell.cellImageView.image = image }
+		}
 		
 		return cell
 	}

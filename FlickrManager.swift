@@ -42,6 +42,24 @@ public class FlickrManager {
 		}
 		sessionTask.resume()
 	}
+	
+	func downloadImage(request: NSMutableURLRequest, handler: completionClosure) {
+		let urlSession = NSURLSession(configuration: sessionConfiguration, delegate: nil, delegateQueue: nil)
+		let sessionTask = urlSession.dataTaskWithRequest(request) {
+			(data, response, error) in
+			//print(response)
+			guard let data = data else {
+				if let error = error {
+					return handler(nil, error.localizedDescription)
+				} else {
+					return handler(nil, "Empty request")
+				}
+			}
+			handler(data, nil)
+		}
+		sessionTask.resume()
+	}
+	
 
 	
 	private func parse(fromData data: NSData) -> AnyObject? {

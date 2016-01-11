@@ -10,6 +10,11 @@ import Foundation
 import UIKit
 import CoreData
 
+private let entityName = "Photo"
+
+//TODO: Add photoId to Data Model sort by photoId instead
+private let sortDescriptor = "imageURL"
+
 class PinDetailViewController: UIViewController {
 	
 	let cellIdentifier = "PinPhotoCollectionCell"
@@ -32,8 +37,14 @@ class PinDetailViewController: UIViewController {
 		super.viewDidLoad()
 		// enable multiple cells selection
 		collectionView.allowsMultipleSelection = true
-		
-		getPhotos()
+		getPhotosForPlaceId()
+		fetchPhotos()
+		print("Fetched objects: \(fetchedResultsController.fetchedObjects?.count)")
+		print(" Pin photos: \(location?.photos.count)")
+		// for photo in (location?.photos)! {
+		//	print("URLS: \(photo.imageURL)")
+		// }
+		collectionView.reloadData()
 	}
 	
 	override func viewWillDisappear(animated: Bool) {
@@ -47,8 +58,9 @@ class PinDetailViewController: UIViewController {
 	}()
 	
 	lazy var fetchedResultsController: NSFetchedResultsController = {
-		let fetchRequest = NSFetchRequest(entityName: "Photo")
-		fetchRequest.sortDescriptors = [NSSortDescriptor(key: "title", ascending: true)]
+		//TODO: - Change to struct values
+		let fetchRequest = NSFetchRequest(entityName: entityName)
+		fetchRequest.sortDescriptors = [NSSortDescriptor(key: sortDescriptor, ascending: true)]
 		
 		let fetchResultController = NSFetchedResultsController(fetchRequest: fetchRequest, managedObjectContext: self.sharedContext, sectionNameKeyPath: nil, cacheName: nil)
 		
@@ -61,7 +73,39 @@ class PinDetailViewController: UIViewController {
 	
 	// MARK: - Methods
 	
-	func getPhotos() {
+	
+	func getPhotosForPlaceId() {
+		guard let
+			pin = location,
+			lat = location?.valueForKey(Pin.Keys.Latitude) as? NSNumber,
+			lon = location?.valueForKey(Pin.Keys.Longitude) as? NSNumber else {
+				print("No Pin!")
+				return
+		}
+		FlickrManager.sharedInstance.getFlickrPlaceIdByLatLon(latitude: lat, longitude: lon) { data, error in
+			guard let placeId = data as? String else {
+				print("PlaceId. Error: \(error)")
+				return
+			}
+			FlickrManager.sharedInstance.getFlickPhotosForPlaceId(placeId) { data, error in
+				guard let photos = data as? [[String : AnyObject]] else {
+					print("Photos. \(error)")
+					return
+				}
+				let _ = photos.map { (object: [String : AnyObject]) -> Photo in
+					let urlm = object["url_q"] as! NSString
+					let dictionary = [Photo.Keys.imageURL : urlm]
+					let photo = Photo(dictionary: dictionary, context: self.sharedContext)
+					photo.location = pin
+					return photo
+				}
+			}
+		}
+		CoreDataStackManager.sharedInstance.saveContext()
+	}
+	
+	// MARK: - Experiments with different Flickr searches
+	func getPhotosGeoPhotosForLocation() {
 		guard let location = location else {
 			return
 		}
@@ -86,10 +130,11 @@ class PinDetailViewController: UIViewController {
 		}
 		print("Photos to pin: \(location.photos.count)")
 	}
-	
-	// Experiments with different Flickr searches
+
 	func getPhotosForPlaceIdAndTags() {
-		guard let lat = location?.valueForKey(Pin.Keys.Latitude) as? NSNumber,
+		guard let
+			pin = location,
+			lat = location?.valueForKey(Pin.Keys.Latitude) as? NSNumber,
 			lon = location?.valueForKey(Pin.Keys.Longitude) as? NSNumber else {
 				print("No Pin!")
 				return
@@ -111,11 +156,13 @@ class PinDetailViewController: UIViewController {
 						print("Photos. \(error)")
 						return
 					}
+					// TODO: - Re check Types in Data Model and get Types from object accordingly
 					let _ = photos.map { (object: [String : AnyObject]) -> Photo in
+						// Force unwrap will crash if there is no "url_m" key!
 						let urlm = object["url_m"] as! NSString
 						let dictionary = [Photo.Keys.imageURL : urlm]
 						let photo = Photo(dictionary: dictionary, context: self.sharedContext)
-						photo.location = self.location!
+						photo.location = pin
 						return photo
 					}
 					
@@ -126,6 +173,16 @@ class PinDetailViewController: UIViewController {
 	}
 	
 	// MARK: - Collection view helpers
+	
+	func fetchPhotos() -> Bool {
+		do {
+			try fetchedResultsController.performFetch()
+		} catch {
+			print("Perform fetch. Unresolved error \(error)")
+			return false
+		}
+		return true
+	}
 	
 	func deleteSelection() {
 		// TODO: - verify deletion in accordance with FRC!!!
@@ -149,5 +206,6 @@ class PinDetailViewController: UIViewController {
 			}
 			collectionView.deleteItemsAtIndexPaths(selectedRows)
 		}
+		CoreDataStackManager.sharedInstance.saveContext()
 	}
 }

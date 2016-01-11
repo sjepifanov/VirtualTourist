@@ -21,7 +21,7 @@ extension FlickrManager {
 		static let AccuracyRegion = "6"
 		static let AccuracyCity = "11"
 		static let AccuracyStreet = "16"
-		static let Extras = "url_m"
+		static let Extras = "url_q"
 		static let DataFormat = "json"
 		static let NoJSONCallback = "1"
 		static let ContentType = "1"
