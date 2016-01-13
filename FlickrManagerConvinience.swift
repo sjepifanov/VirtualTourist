@@ -10,11 +10,11 @@ import Foundation
 
 extension FlickrManager {
 	
-	func getFlickrPhotosForLocation(latitude latitude: NSNumber, longitude: NSNumber, handler: completionClosure){
+	func getFlickrPhotosForLocation(latitude latitude: NSNumber, longitude: NSNumber, handler: CompletionClosure){
 		let methodArguments = [
 			MethodArguments.Method : Keys.PhotosForLocation,
 			MethodArguments.Accuracy : Keys.AccuracyStreet,
-			//MethodArguments.PerPage : "21",
+			MethodArguments.PerPage : "21",
 			MethodArguments.Latitude : String(latitude),
 			MethodArguments.Longitude : String(longitude)
 		]
@@ -25,7 +25,7 @@ extension FlickrManager {
 			guard let data = data else {
 				return handler(nil, error)
 			}
-			guard let photos = data.valueForKey(Keys.Photos)?.valueForKey(Keys.Photo) as? [[String : AnyObject]] else {
+			guard let photos = data.valueForKeyPath(Keys.Photos + "." + Keys.Photo) as? [[String : AnyObject]] else {
 				return handler(nil, "No photos found.")
 			}
 			
@@ -33,7 +33,7 @@ extension FlickrManager {
 		}
 	}
 	
-	func getFlickrPlaceIdByLatLon(latitude latitude: NSNumber, longitude: NSNumber, handler: completionClosure) {
+	func getFlickrPlaceIdByLatLon(latitude latitude: NSNumber, longitude: NSNumber, handler: CompletionClosure) {
 		let methodArguments = [
 			MethodArguments.Method : Keys.FindByLatLon,
 			MethodArguments.Accuracy : Keys.AccuracyStreet,
@@ -47,7 +47,6 @@ extension FlickrManager {
 			guard let data = data else {
 				return handler(nil, error)
 			}
-			//guard let place = data.valueForKey(Keys.Places)?.valueForKey(Keys.Place) as? [[String : AnyObject]] else {
 			guard let place = data.valueForKeyPath(Keys.Places + "." + Keys.Place) as? [[String : AnyObject]] else {
 				return handler(nil, "No Places found for location.")
 			}
@@ -59,7 +58,7 @@ extension FlickrManager {
 		}
 	}
 	
-	func getFlickrTagsForPlace(placeId: String, handler: completionClosure) {
+	func getFlickrTagsForPlace(placeId: String, handler: CompletionClosure) {
 		let methodArguments = [
 			MethodArguments.Method : Keys.TagsForPlace,
 			MethodArguments.PlaceID : placeId
@@ -71,7 +70,7 @@ extension FlickrManager {
 			guard let data = data else {
 				return handler(nil, error)
 			}
-			guard let tags = data.valueForKey(Keys.Tags)?.valueForKey(Keys.Tag) as? [[String : AnyObject]] else {
+			guard let tags = data.valueForKeyPath(Keys.Tags + "." + Keys.Tag) as? [[String : AnyObject]] else {
 				return handler(nil, "No Tags found for location")
 			}
 			let regEx = "^[a-zA-Z0-9]*$"
@@ -86,7 +85,7 @@ extension FlickrManager {
 		}
 	}
 	
-	func getFlickPhotosForTags(tags: String, placeId: String, handler: completionClosure) {
+	func getFlickPhotosForTags(tags: String, placeId: String, handler: CompletionClosure) {
 		let methodArguments = [
 			MethodArguments.Method : Keys.Search,
 			MethodArguments.MinUploadDat : Keys.Date,
@@ -100,7 +99,7 @@ extension FlickrManager {
 			guard let data = data else {
 				return handler(nil, error)
 			}
-			guard let photos = data.valueForKey(Keys.Photos)?.valueForKey(Keys.Photo) as? [[String : AnyObject]] else {
+			guard let photos = data.valueForKeyPath(Keys.Photos + "." + Keys.Photo) as? [[String : AnyObject]] else {
 				return handler(nil, "No photos found.")
 			}
 			
@@ -108,12 +107,41 @@ extension FlickrManager {
 		}
 	}
 	
-	// currently using
-	func getFlickPhotosForPlaceId(placeId: String, handler: completionClosure) {
+	// MARK: - 	Currently using!!! Remove or coment other methods
+
+	func getFlickPhotosForPlaceId(placeId: String, handler: CompletionClosure) {
 		let methodArguments = [
 			MethodArguments.Method : Keys.Search,
 			MethodArguments.MinUploadDat : Keys.Date,
-			MethodArguments.PlaceID : placeId
+			MethodArguments.PlaceID : placeId,
+			MethodArguments.PerPage : "21",
+			"sort" : "interestingness-desc,relevance"
+		]
+		guard let request = prepareRequest(methodArguments) else {
+			return handler(nil, "Error preparing request")
+		}
+		FlickrManager.sharedInstance.sendRequest(request) { data, error in
+			guard let data = data else {
+				return handler(nil, error)
+			}
+			guard let photos = data.valueForKeyPath(Keys.Photos + "." + Keys.Photo) as? [[String : AnyObject]] else {
+				return handler(nil, "No photos found.")
+			}
+			
+			handler(photos, nil)
+		}
+	}
+	
+	func getFlickrPhotoByLatLon(latitude latitude: NSNumber, longitude: NSNumber, handler: CompletionClosure) {
+		let methodArguments = [
+			MethodArguments.Method : Keys.Search,
+			MethodArguments.MinUploadDat : Keys.Date,
+			MethodArguments.Latitude : "\(latitude)",
+			MethodArguments.Longitude : "\(longitude)",
+			MethodArguments.Accuracy : Keys.AccuracyRegion,
+			MethodArguments.ContentType : Keys.ContentType,
+			MethodArguments.PerPage : "21",
+			"sort" : "interestingness-desc,relevance"
 		]
 		guard let request = prepareRequest(methodArguments) else {
 			return handler(nil, "Error preparing request")
@@ -132,7 +160,6 @@ extension FlickrManager {
 	
 	func getFlickrPhoto(url: NSString, handler: (imageData: NSData?, error: String?) -> Void) {
 		let url = NSURL(string: url as String)
-		print(url)
 		let request = NSMutableURLRequest(URL: url!)
 		FlickrManager.sharedInstance.downloadImage(request) {data, error in
 			guard let data = data as? NSData else {

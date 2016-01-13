@@ -58,7 +58,24 @@ class MapViewController: UIViewController {
 		]
 		let annotation = Pin(dictionary: dictionary, context: sharedContext)
 		mapView.addAnnotation(annotation)
-		mapView.selectAnnotation(annotation, animated: false)
+		
+		// MARK: - Prefetch photos for location
+		// Here I only get photo URLs, either download images here or later in collectionViewCell
+		FlickrManager.sharedInstance.getFlickrPhotoByLatLon(
+			latitude: touchMapCoordinate.latitude as NSNumber,
+			longitude: touchMapCoordinate.longitude as NSNumber) { data, error in
+			guard let photos = data as? [[String : AnyObject]] else {
+				return
+			}
+			let _ = photos.map { (object: [String : AnyObject]) -> Photo in
+				// TODO: - Force Downcast! Deal with nil value!
+				let url = object[FlickrManager.Keys.Extras] as! NSString
+				let dictionary = [Photo.Keys.imageURL : url]
+				let photo = Photo(dictionary: dictionary, context: self.sharedContext)
+				photo.location = annotation
+				return photo
+			}
+		}
 		CoreDataStackManager.sharedInstance.saveContext()
 	}
 	
@@ -78,16 +95,16 @@ class MapViewController: UIViewController {
 		guard let pin = managedObject else {
 			return
 		}
-		// should be set as selected automatically no need to set manually
-		// mapView.selectAnnotation(annotation, animated: false)
 		switch editing {
 		case true:
-			// TODO: - Check if emplementing FRC delegates to bulk delete Pin objects will work better
+			pin.photos = nil
 			sharedContext.deleteObject(pin)
 			mapView.removeAnnotation(annotation)
+			// Save context
 			CoreDataStackManager.sharedInstance.saveContext()
 		default:
-			guard let controller = storyboard?.instantiateViewControllerWithIdentifier("PinDetailViewController") as? PinDetailViewController else {
+			guard let
+				controller = storyboard?.instantiateViewControllerWithIdentifier("PinDetailViewController") as? PinDetailViewController else {
 				break
 			}
 			controller.location = pin
@@ -97,7 +114,7 @@ class MapViewController: UIViewController {
 	
 	// MARK: - NSKeyedArchiver and CoreData Convinience
 	
-	// Initilize managedObject as nil. Will be used in delegate methods.
+	// Initilize managedObject as nil. Will be used in delegate methods
 	var managedObject: Pin? = nil
 	
 	// FilePath property
@@ -122,7 +139,10 @@ class MapViewController: UIViewController {
 		// Add a sort descriptor.
 		fetchRequest.sortDescriptors = [NSSortDescriptor(key: Keys.Latitude, ascending: true)]
 		// Create the Fetched Results Controller
-		let fetchedResultsController = NSFetchedResultsController(fetchRequest: fetchRequest, managedObjectContext: self.sharedContext, sectionNameKeyPath: nil, cacheName: nil)
+		let fetchedResultsController = NSFetchedResultsController(fetchRequest: fetchRequest,
+			managedObjectContext: self.sharedContext,
+			sectionNameKeyPath: nil,
+			cacheName: nil)
 		return fetchedResultsController
 	}()
 	
@@ -173,7 +193,8 @@ class MapViewController: UIViewController {
 			print("Unable to access stored map region")
 			return
 		}
-		guard let latitude = regionDictionary[Keys.Latitude],
+		guard let
+			latitude = regionDictionary[Keys.Latitude],
 			longitude = regionDictionary[Keys.Longitude],
 			latitudeDelta = regionDictionary[Keys.LatitudeDelta],
 			longitudeDelta = regionDictionary[Keys.LongitudeDelta] else {
@@ -187,7 +208,7 @@ class MapViewController: UIViewController {
 		mapView.setRegion(region, animated: animated)
 	}
 	
-	// Fetch Pins.
+	// Fetch Pins
 	func fetchPins() -> Bool {
 		do {
 			try fetchedResultsController.performFetch()

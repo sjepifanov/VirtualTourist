@@ -6,7 +6,7 @@
 //  Copyright © 2016 Sergei. All rights reserved.
 //
 
-// Taken from http://stackoverflow.com/questions/20554137/nsfetchedresultscontollerdelegate-for-collectionview thread
+// Taken from http://stackoverflow.com/questions/20554137/nsfetchedresultscontollerdelegate-for-collectionview
 
 import CoreData
 
@@ -48,12 +48,9 @@ extension PinDetailViewController: NSFetchedResultsControllerDelegate {
 	
 	func controllerDidChangeContent(controller: NSFetchedResultsController) {
 		collectionView.performBatchUpdates({ () -> Void in
-			for operation in self.blockOperations {
-				operation.start()
-			}
+			self.blockOperations.forEach { $0.start() }
 			}, completion: { (finished) -> Void in
 				self.blockOperations.removeAll(keepCapacity: false)
-				CoreDataStackManager.sharedInstance.saveContext()
 		})
 	}
 }

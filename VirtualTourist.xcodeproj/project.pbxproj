@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		850793D21C46756F00F924DB /* ImageCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 850793D11C46756F00F924DB /* ImageCache.swift */; };
 		8510504F1C2AF8110073559D /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8510504E1C2AF8110073559D /* AppDelegate.swift */; };
 		851050511C2AF8110073559D /* MapViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 851050501C2AF8110073559D /* MapViewController.swift */; };
 		851050541C2AF8110073559D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 851050521C2AF8110073559D /* Main.storyboard */; };
@@ -29,6 +30,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		850793D11C46756F00F924DB /* ImageCache.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ImageCache.swift; sourceTree = "<group>"; };
 		8510504B1C2AF8110073559D /* VirtualTourist.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = VirtualTourist.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		8510504E1C2AF8110073559D /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		851050501C2AF8110073559D /* MapViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapViewController.swift; sourceTree = "<group>"; };
@@ -107,6 +109,7 @@
 				851050791C33F69B0073559D /* FlickrManagerConvinience.swift */,
 				851050751C33D4620073559D /* FlickManagerConstants.swift */,
 				85149AB41C41E2D6006EBB2C /* GCDconvinienceAPI.swift */,
+				850793D11C46756F00F924DB /* ImageCache.swift */,
 			);
 			name = Model;
 			path = ..;
@@ -219,6 +222,7 @@
 			files = (
 				853B02B81C3E0F1800652179 /* VirtualTourist.xcdatamodeld in Sources */,
 				851050691C2B1F390073559D /* Photo.swift in Sources */,
+				850793D21C46756F00F924DB /* ImageCache.swift in Sources */,
 				851050671C2B1CDB0073559D /* Pin.swift in Sources */,
 				851050511C2AF8110073559D /* MapViewController.swift in Sources */,
 				8510507A1C33F69B0073559D /* FlickrManagerConvinience.swift in Sources */,

@@ -8,6 +8,7 @@
 
 import Foundation
 import CoreData
+import UIKit
 
 class Photo: NSManagedObject {
 	
@@ -31,5 +32,20 @@ class Photo: NSManagedObject {
 			return
 		}
 		self.imageURL = path
+	}
+	
+	// TODO: - Set identifier for photo! (id+"_"title)?
+	var photo: UIImage? {
+		get {
+			return FlickrManager.Caches.imageCache.imageWithIdentifier(imageURL as String)
+		}
+		set {
+			FlickrManager.Caches.imageCache.storeImage(newValue, withIdentifier: imageURL as String)
+		}
+	}
+	
+	// TODO: - implement
+	func clearCache() {
+		// upon deletion clear cache by "identifier"
 	}
 }

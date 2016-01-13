@@ -55,6 +55,7 @@ extension MapViewController: MKMapViewDelegate {
 			let longitude = annotation.coordinate.longitude as NSNumber
 			pin.setValue(latitude, forKey: Keys.Latitude)
 			pin.setValue(longitude, forKey: Keys.Longitude)
+			pin.photos = nil
 			CoreDataStackManager.sharedInstance.saveContext()
 		default:
 			break

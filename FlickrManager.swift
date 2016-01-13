@@ -9,9 +9,13 @@
 import CoreData
 import SystemConfiguration
 
-public class FlickrManager {
+class FlickrManager {
 	
-	public typealias completionClosure = (AnyObject?, String?) -> Void
+	struct Caches {
+		static let imageCache = ImageCache()
+	}
+	
+	typealias CompletionClosure = (AnyObject?, String?) -> Void
 	
 	static let sharedInstance = FlickrManager()
 	
@@ -23,7 +27,7 @@ public class FlickrManager {
 		sessionConfiguration = NSURLSessionConfiguration.defaultSessionConfiguration()
 	}
 	
-	public func sendRequest(request: NSMutableURLRequest, handler: completionClosure) {
+	func sendRequest(request: NSMutableURLRequest, handler: CompletionClosure) {
 		let urlSession = NSURLSession(configuration: sessionConfiguration, delegate: nil, delegateQueue: nil)
 		let sessionTask = urlSession.dataTaskWithRequest(request) {
 			(data, response, error) in
@@ -43,11 +47,10 @@ public class FlickrManager {
 		sessionTask.resume()
 	}
 	
-	func downloadImage(request: NSMutableURLRequest, handler: completionClosure) {
+	func downloadImage(request: NSMutableURLRequest, handler: CompletionClosure) {
 		let urlSession = NSURLSession(configuration: sessionConfiguration, delegate: nil, delegateQueue: nil)
 		let sessionTask = urlSession.dataTaskWithRequest(request) {
 			(data, response, error) in
-			//print(response)
 			guard let data = data else {
 				if let error = error {
 					return handler(nil, error.localizedDescription)
@@ -80,7 +83,7 @@ public class FlickrManager {
 		return components.percentEncodedQuery ?? ""
 	}
 	
-	public func prepareRequest(dictionary: [String : String]) -> NSMutableURLRequest? {
+	func prepareRequest(dictionary: [String : String]) -> NSMutableURLRequest? {
 		// Mutable dictionary of method arguments
 		var methodArguments = [
 			MethodArguments.ApiKey : Keys.APIKey,
@@ -103,13 +106,13 @@ public class FlickrManager {
 	// Taken from Mastering Swift 2.0 book - https://www.packtpub.com/application-development/mastering-swift-2
 	// TODO: - Implement!
 	// Check Network Connection
-	public enum ConnectionType {
+	enum ConnectionType {
 		case NONETWORK
 		case MOBILE3GNETWORK
 		case WIFINETWORK
 	}
 	
-	public func networkConnectionType(hostname: NSString) -> ConnectionType {
+	func networkConnectionType(hostname: NSString) -> ConnectionType {
 		let reachabilityRef = SCNetworkReachabilityCreateWithName(nil, hostname.UTF8String)
 		var flags = SCNetworkReachabilityFlags()
 		SCNetworkReachabilityGetFlags(reachabilityRef!, &flags)
@@ -127,5 +130,4 @@ public class FlickrManager {
 		}
 		return ConnectionType.NONETWORK // no connection at all
 	}
-	
 }

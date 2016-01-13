@@ -29,7 +29,7 @@ class Pin: NSManagedObject {
 	// Managed values
 	@NSManaged var latitude: NSNumber
 	@NSManaged var longitude: NSNumber
-	@NSManaged var photos: [Photo]
+	@NSManaged var photos: [Photo]?
 	
 	override init(entity: NSEntityDescription, insertIntoManagedObjectContext context: NSManagedObjectContext?) {
 		super.init(entity: entity, insertIntoManagedObjectContext: context)
@@ -41,9 +41,11 @@ class Pin: NSManagedObject {
 			fatalError("Can not initialize Pin entity!")
 		}
 		super.init(entity: entity, insertIntoManagedObjectContext: context)
-		guard let lat = dictionary[Keys.Latitude],
+		guard let
+			lat = dictionary[Keys.Latitude],
 			lon = dictionary[Keys.Longitude] else {
-				return
+				fatalError("Can not initialize Pin entity!")
+				//return
 		}
 		latitude = lat
 		longitude = lon
