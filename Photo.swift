@@ -14,8 +14,17 @@ class Photo: NSManagedObject {
 	
 	struct Keys {
 		static let imageURL = "imageURL"
+		static let farm = "farm"
+		static let server = "server"
+		static let secret = "secret"
+		static let id = "id"
+		static let size = "q"
 	}
 	
+	@NSManaged var farm: NSString
+	@NSManaged var server: NSString
+	@NSManaged var id: NSString
+	@NSManaged var secret: NSString
 	@NSManaged var imageURL: NSString
 	@NSManaged var location: Pin
 	
@@ -28,24 +37,30 @@ class Photo: NSManagedObject {
 			fatalError("Unable to load context")
 		}
 		super.init(entity: entity, insertIntoManagedObjectContext: context)
-		guard let path = dictionary[Keys.imageURL] else {
+		guard let
+			farm = dictionary[Keys.farm],
+			server = dictionary[Keys.server],
+			id = dictionary[Keys.id],
+			secret = dictionary[Keys.secret] else {
 			return
 		}
-		self.imageURL = path
+		self.farm = farm
+		self.server = server
+		self.id = id
+		self.secret = secret
+		self.imageURL = "https://farm\(farm).staticflickr.com/\(server)/\(id)_\(secret)_\(Keys.size).jpg"
 	}
 	
-	// TODO: - Set identifier for photo! (id+"_"title)?
-	var photo: UIImage? {
+	var identifier: String {
+		return "\(id)_\(secret).jpg"
+	}
+
+	var image: UIImage? {
 		get {
-			return FlickrManager.Caches.imageCache.imageWithIdentifier(imageURL as String)
+			return FlickrManager.Caches.imageCache.imageWithIdentifier(identifier)
 		}
 		set {
-			FlickrManager.Caches.imageCache.storeImage(newValue, withIdentifier: imageURL as String)
+			FlickrManager.Caches.imageCache.storeImage(newValue, withIdentifier: identifier)
 		}
-	}
-	
-	// TODO: - implement
-	func clearCache() {
-		// upon deletion clear cache by "identifier"
 	}
 }

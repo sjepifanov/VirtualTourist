@@ -47,7 +47,11 @@ class FlickrManager {
 		sessionTask.resume()
 	}
 	
-	func downloadImage(request: NSMutableURLRequest, handler: CompletionClosure) {
+	func downloadImage(url: String, handler: CompletionClosure) -> NSURLSessionTask? {
+		guard let url = NSURL(string: url) else {
+			return nil
+		}
+		let request = NSMutableURLRequest(URL: url)
 		let urlSession = NSURLSession(configuration: sessionConfiguration, delegate: nil, delegateQueue: nil)
 		let sessionTask = urlSession.dataTaskWithRequest(request) {
 			(data, response, error) in
@@ -61,6 +65,7 @@ class FlickrManager {
 			handler(data, nil)
 		}
 		sessionTask.resume()
+		return sessionTask
 	}
 	
 
@@ -88,7 +93,6 @@ class FlickrManager {
 		var methodArguments = [
 			MethodArguments.ApiKey : Keys.APIKey,
 			MethodArguments.SafeSearch : Keys.SafeSearch,
-			MethodArguments.Extras : Keys.Extras,
 			MethodArguments.DataFormat : Keys.DataFormat,
 			MethodArguments.NoJSONCallback : Keys.NoJSONCallback,
 		]

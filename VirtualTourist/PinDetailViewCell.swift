@@ -10,7 +10,17 @@ import Foundation
 import UIKit
 
 class PinDetailViewCell: UICollectionViewCell {
-	@IBOutlet weak var activityIndicator: UIActivityIndicatorView!
 	
+	@IBOutlet weak var activityIndicator: UIActivityIndicatorView!
 	@IBOutlet weak var cellImageView: UIImageView!
+	
+	var taskToCancelifCellIsReused: NSURLSessionTask? {
+		didSet {
+			if let taskToCancel = oldValue {
+				print("Task Cancelled")
+				taskToCancel.cancel()
+			}
+		}
+	}
+	
 }

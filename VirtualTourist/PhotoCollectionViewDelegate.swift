@@ -23,16 +23,10 @@ extension PinDetailViewController: UICollectionViewDelegate, UICollectionViewDat
 		// TODO: - Force unwrap!!!
 		let photo = fetchedResultsController.objectAtIndexPath(indexPath) as! Photo
 		let cell = collectionView.dequeueReusableCellWithReuseIdentifier(cellIdentifier, forIndexPath: indexPath) as! PinDetailViewCell
-		
-		// TODO: - move cell configuration to separate method
 		// check if cell is selected and set alpha appropriatelly. otherwise reused cells may appear as selected though actually not
 		cell.selected ? (cell.alpha = 0.5) : (cell.alpha = 1.0)
-		// TODO: - add image to cell through cache
 		
-		FlickrManager.sharedInstance.getFlickrPhoto(photo.imageURL) {data, error in
-			let image = UIImage(data: data!)
-			Queue.Main.execute { cell.cellImageView.image = image }
-		}
+		configureCell(cell, photo: photo)
 		
 		return cell
 	}
@@ -40,7 +34,7 @@ extension PinDetailViewController: UICollectionViewDelegate, UICollectionViewDat
 	func collectionView(collectionView: UICollectionView, didSelectItemAtIndexPath indexPath: NSIndexPath) {
 		
 		// TODO: - when at least one item is selected update UIButton title to "Delete Photos"(implement)
-		print("Select cell at: \(indexPath)")
+		//print("Select cell at: \(indexPath)")
 		
 		if let cell = collectionView.cellForItemAtIndexPath(indexPath) {
 			cell.alpha = 0.5
@@ -56,5 +50,35 @@ extension PinDetailViewController: UICollectionViewDelegate, UICollectionViewDat
 		}
 		// TODO: - Button state inconsitent! Verify!
 		removeRefreshButtonState()
+	}
+	
+	func configureCell(cell: PinDetailViewCell, photo: Photo) {
+		var image = UIImage(named: "placeHolder")
+		cell.layer.borderColor = UIColor.whiteColor().CGColor
+		cell.layer.borderWidth = 1
+		
+		cell.cellImageView.image = nil
+		
+		if photo.image != nil {
+			image = photo.image
+		} else {
+			cell.activityIndicator.startAnimating()
+			Queue.UserInitiated.execute { () -> Void in
+				let task = FlickrManager.sharedInstance.downloadImage(photo.imageURL as String) { imageData, error in
+					guard let imageData = imageData as? NSData else {
+						print(error)
+						return
+					}
+					let image = UIImage(data: imageData)
+					photo.image = image
+					Queue.Main.execute { () -> Void in
+						cell.activityIndicator.stopAnimating()
+						cell.cellImageView.image = image
+					}
+				}
+				cell.taskToCancelifCellIsReused = task
+			}
+		}
+		cell.cellImageView?.image = image
 	}
 }

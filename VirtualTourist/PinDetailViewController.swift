@@ -13,9 +13,6 @@ import MapKit
 
 private let entityName = "Photo"
 
-//TODO: Add photoId to Data Model sort by photoId instead
-private let sortDescriptor = "imageURL"
-
 class PinDetailViewController: UIViewController {
 	
 	let cellIdentifier = "PinPhotoCollectionCell"
@@ -38,6 +35,7 @@ class PinDetailViewController: UIViewController {
 		automaticallyAdjustsScrollViewInsets = false
 		configureMapView(location)
 		removeRefreshButton.enabled = false
+		removeRefreshButton.setTitle("New Collection", forState: .Normal)
 		fetchedResultsController.delegate = self
 		fetchPhotos()
 		print("Fetched objects: \(fetchedResultsController.fetchedObjects?.count)")
@@ -45,14 +43,14 @@ class PinDetailViewController: UIViewController {
 	
 	override func viewWillAppear(animated: Bool) {
 		super.viewWillAppear(animated)
-		
+
 		if let photos = location?.photos where photos.isEmpty {
 			print("Empty")
 			getPhotosByLatLon(location)
 		} else {
 			print("Some")
-			collectionView.reloadData()
 			removeRefreshButton.enabled = true
+			collectionView.reloadData()
 		}
 	}
 	
@@ -84,7 +82,7 @@ class PinDetailViewController: UIViewController {
 		//TODO: - Change to struct values
 		let fetchRequest = NSFetchRequest(entityName: entityName)
 		// REplace sort descriptor with ENum key
-		fetchRequest.sortDescriptors = [NSSortDescriptor(key: sortDescriptor, ascending: true)]
+		fetchRequest.sortDescriptors = [NSSortDescriptor(key: Photo.Keys.id, ascending: true)]
 		let fetchResultController = NSFetchedResultsController(fetchRequest: fetchRequest,
 			managedObjectContext: self.sharedContext,
 			sectionNameKeyPath: nil,
@@ -103,16 +101,20 @@ class PinDetailViewController: UIViewController {
 			getPhotosByLatLon(location)
 		} else {
 			deleteSelectedPhotos()
+			collectionView.selectItemAtIndexPath(nil, animated: true, scrollPosition: .None)
+			removeRefreshButtonState()
 		}
-		
-		CoreDataStackManager.sharedInstance.saveContext()
+		saveContext()
 	}
 	
 	func deleteAllPhotos() {
 		guard let photos = fetchedResultsController.fetchedObjects as? [Photo] else {
 			return
 		}
-		photos.forEach { sharedContext.deleteObject($0) }
+		photos.forEach { (photo: (Photo)) -> Void in
+			photo.image = nil
+			sharedContext.deleteObject(photo)
+		}
 	}
 	
 	func deleteSelectedPhotos() {
@@ -121,6 +123,7 @@ class PinDetailViewController: UIViewController {
 		}
 		selectedItems.forEach { (indexPath:(NSIndexPath)) -> Void in
 			if let photo = fetchedResultsController.objectAtIndexPath(indexPath) as? Photo {
+				photo.image = nil
 				sharedContext.deleteObject(photo)
 			}
 		}
@@ -138,6 +141,7 @@ class PinDetailViewController: UIViewController {
 		}
 		let center = CLLocationCoordinate2D(latitude: lat as CLLocationDegrees, longitude: lon as CLLocationDegrees)
 		let region = MKCoordinateRegion(center: center, span: MKCoordinateSpan(latitudeDelta: 1.0, longitudeDelta: 1.0))
+		self.mapView.setCenterCoordinate(center, animated: true)
 		self.mapView.setRegion(region, animated: true)
 		pin.setCoordinate(center)
 		self.mapView.addAnnotation(pin)
@@ -152,30 +156,29 @@ class PinDetailViewController: UIViewController {
 				return
 		}
 		self.removeRefreshButton.enabled = false
-		FlickrManager.sharedInstance.getFlickrPhotoByLatLon(latitude: lat, longitude: lon) { data, error in
-			guard let photos = data as? [[String : AnyObject]] else {
-				print("Photos. \(error)")
-				return
+		Queue.UserInitiated.execute { () -> Void in
+			FlickrManager.sharedInstance.getFlickrPhotoByLatLon(latitude: lat, longitude: lon) { data, error in
+				guard let data = data as? [[String : AnyObject]] else {
+					print("Photos. \(error)")
+					return
+				}
+				let photosDictionary = FlickrManager.sharedInstance.parsePhotosDictionary(data)
+				photosDictionary.forEach { (dictionary: [String : NSString]) -> () in
+					let photo = Photo(dictionary: dictionary, context: self.sharedContext)
+					photo.location = pin
+				}
+				self.removeRefreshButton.enabled = true
+				self.saveContext()
 			}
-			let _ = photos.map { (object: [String : AnyObject]) -> Photo in
-				// TODO: - Force Downcast! Deal with nil value!
-				let url = object[FlickrManager.Keys.Extras] as! NSString
-				let dictionary = [Photo.Keys.imageURL : url]
-				let photo = Photo(dictionary: dictionary, context: self.sharedContext)
-				photo.location = pin
-				return photo
-			}
+			Queue.Main.execute { self.collectionView.reloadData() }
 		}
-		self.removeRefreshButton.enabled = true
-		Queue.Main.execute { self.collectionView.reloadData() }
-		CoreDataStackManager.sharedInstance.saveContext()
 	}
 	
 	func removeRefreshButtonState() {
 		if let selectedItems = collectionView.indexPathsForSelectedItems() where !selectedItems.isEmpty {
-			self.removeRefreshButton.titleLabel?.text = "Remove Selected Images"
+			self.removeRefreshButton.setTitle("Remove Selected Pictures", forState: .Normal)
 		} else {
-			self.removeRefreshButton.titleLabel?.text = "New Collection"
+			self.removeRefreshButton.setTitle("New Collection", forState: .Normal)
 		}
 	}
 	
@@ -194,6 +197,6 @@ class PinDetailViewController: UIViewController {
 		}
 		return true
 	}
-
+	
 //EOF
 }

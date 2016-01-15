@@ -60,23 +60,23 @@ class MapViewController: UIViewController {
 		mapView.addAnnotation(annotation)
 		
 		// MARK: - Prefetch photos for location
-		// Here I only get photo URLs, either download images here or later in collectionViewCell
+		// TODO: - Must execute before opening
+		/*
 		FlickrManager.sharedInstance.getFlickrPhotoByLatLon(
 			latitude: touchMapCoordinate.latitude as NSNumber,
 			longitude: touchMapCoordinate.longitude as NSNumber) { data, error in
-			guard let photos = data as? [[String : AnyObject]] else {
-				return
-			}
-			let _ = photos.map { (object: [String : AnyObject]) -> Photo in
-				// TODO: - Force Downcast! Deal with nil value!
-				let url = object[FlickrManager.Keys.Extras] as! NSString
-				let dictionary = [Photo.Keys.imageURL : url]
-				let photo = Photo(dictionary: dictionary, context: self.sharedContext)
-				photo.location = annotation
-				return photo
-			}
+				guard let response = data as? [[String : AnyObject]] else {
+					print("Photos. \(error)")
+					return
+				}
+				let photosDictionary = FlickrManager.sharedInstance.parsePhotosDictionary(response)
+				photosDictionary.forEach { (dictionary: [String : NSString]) -> () in
+					let photo = Photo(dictionary: dictionary, context: self.sharedContext)
+					photo.location = annotation
+				}
+				Queue.Main.execute { saveContext() }
 		}
-		CoreDataStackManager.sharedInstance.saveContext()
+*/		CoreDataStackManager.sharedInstance.saveContext()
 	}
 	
 	@IBAction func handleTap(tapRecognizer: UITapGestureRecognizer) {
@@ -105,7 +105,7 @@ class MapViewController: UIViewController {
 		default:
 			guard let
 				controller = storyboard?.instantiateViewControllerWithIdentifier("PinDetailViewController") as? PinDetailViewController else {
-				break
+					break
 			}
 			controller.location = pin
 			showViewController(controller, sender: self)
