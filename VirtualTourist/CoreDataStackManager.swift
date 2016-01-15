@@ -10,14 +10,16 @@ import Foundation
 import CoreData
 
 class CoreDataStackManager {
-	// Taken from http://www.cimgf.com/2014/06/08/the-core-data-stack-in-swift/
+	// Credits to: http://www.cimgf.com/2014/06/08/the-core-data-stack-in-swift/
 	
 	// MARK: - Shared instance
+	
 	static let sharedInstance = CoreDataStackManager()
 	private init() {}
 	
 	// MARK: - CoreData stack
 	
+	// Creating Managed Object Context
 	lazy var managedObjectContext: NSManagedObjectContext = {
 		// Grab the URL for the model.
 		guard let modelURL = NSBundle.mainBundle().URLForResource("VirtualTourist", withExtension: "momd") else {

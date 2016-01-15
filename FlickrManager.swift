@@ -11,12 +11,14 @@ import SystemConfiguration
 
 class FlickrManager {
 	
+	// Initialize shared instance for Image Cache
 	struct Caches {
 		static let imageCache = ImageCache()
 	}
 	
 	typealias CompletionClosure = (AnyObject?, String?) -> Void
 	
+	// Initialize FlickrManager shared instance
 	static let sharedInstance = FlickrManager()
 	
 	var session: NSURLSession
@@ -27,16 +29,23 @@ class FlickrManager {
 		sessionConfiguration = NSURLSessionConfiguration.defaultSessionConfiguration()
 	}
 	
+	// MARK: - Tasks
+	
+	/**
+	Send HTTP request to Flickr API
+	
+	- parameters:
+	- request: NSMutableURLRequest
+	- handler: (AnyObject?, String?)
+	*/
 	func sendRequest(request: NSMutableURLRequest, handler: CompletionClosure) {
 		let urlSession = NSURLSession(configuration: sessionConfiguration, delegate: nil, delegateQueue: nil)
-		let sessionTask = urlSession.dataTaskWithRequest(request) {
-			(data, response, error) in
-			//print(response)
+		let sessionTask = urlSession.dataTaskWithRequest(request) { (data, response, error) in
 			guard let data = data else {
 				if let error = error {
 					return handler(nil, error.localizedDescription)
 				} else {
-					return handler(nil, "Empty request")
+					return handler(nil, "Request contains no data")
 				}
 			}
 			guard let parsedData = self.parse(fromData: data) else {
@@ -47,6 +56,13 @@ class FlickrManager {
 		sessionTask.resume()
 	}
 	
+	/**
+	Download Image from Flickr
+	
+	- parameters:
+	- url: String
+	- handler: (AnyObject?, String?)
+	*/
 	func downloadImage(url: String, handler: CompletionClosure) -> NSURLSessionTask? {
 		guard let url = NSURL(string: url) else {
 			return nil
@@ -68,8 +84,16 @@ class FlickrManager {
 		return sessionTask
 	}
 	
-
+	// MARK: - Helpers
 	
+	/**
+	Serialize JSON Object with Data
+	
+	- parameters:
+	- fromData: NSData
+	- returns:
+	AnyObject?
+	*/
 	private func parse(fromData data: NSData) -> AnyObject? {
 		var parsedData: AnyObject?
 		do {
@@ -81,6 +105,14 @@ class FlickrManager {
 	}
 	
 	// Taken from http://stackoverflow.com/questions/27148100/how-to-escape-the-http-params-in-swift/27151324#27151324
+	/**
+	Escape HTTP parameters
+	
+	- parameters:
+		- dictionary: [String : AnyObject]
+	- returns:
+		String
+	*/
 	private func dictionaryToQueryString(dictionary: [String : AnyObject]) -> String {
 		let queryItems = dictionary.map { NSURLQueryItem(name: $0, value: $1 as? String) }
 		let components = NSURLComponents()
@@ -88,6 +120,14 @@ class FlickrManager {
 		return components.percentEncodedQuery ?? ""
 	}
 	
+	/**
+	Prepare Task Request
+	
+	- parameters:
+		- dictionary: [String : AnyObject]
+	- returns:
+		NSMutableURLRequest?
+	*/
 	func prepareRequest(dictionary: [String : String]) -> NSMutableURLRequest? {
 		// Mutable dictionary of method arguments
 		var methodArguments = [
@@ -107,8 +147,9 @@ class FlickrManager {
 		return NSMutableURLRequest(URL: url)
 	}
 	
+	// MARK: - Network Connection Check
+	
 	// Taken from Mastering Swift 2.0 book - https://www.packtpub.com/application-development/mastering-swift-2
-	// TODO: - Implement!
 	// Check Network Connection
 	enum ConnectionType {
 		case NONETWORK

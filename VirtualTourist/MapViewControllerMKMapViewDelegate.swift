@@ -20,9 +20,11 @@ extension MapViewController: MKMapViewDelegate {
 	func mapView(mapView: MKMapView, viewForAnnotation annotation: MKAnnotation) -> MKAnnotationView? {
 		// If the annotation is the user location, just return nil.
 		if annotation.isKindOfClass(MKUserLocation) { return nil }
+		
 		// Try to dequeue an existing pin view first.
 		let reuseID = "pin"
 		var pinView = mapView.dequeueReusableAnnotationViewWithIdentifier(reuseID) as? MKPinAnnotationView
+		
 		// If no pin view exist create a new one.
 		guard let pin = pinView else {
 			pinView = MKPinAnnotationView(annotation: annotation, reuseIdentifier: reuseID)
@@ -33,9 +35,12 @@ extension MapViewController: MKMapViewDelegate {
 			pin.animatesDrop = true
 			pin.canShowCallout = false
 			pin.draggable = true
+			
 			return pin
 		}
+		
 		pin.annotation = annotation
+		
 		return pin
 	}
 	
@@ -43,39 +48,31 @@ extension MapViewController: MKMapViewDelegate {
 		guard let annotation = view.annotation else {
 			return
 		}
+		
+		// The Pin is draggable. Here we check for dragging state. When Drag started get managed object for current location
+		// When Drag ended update managed object with new coordinates.
 		switch newState {
 		case .Starting:
 			let latitude = annotation.coordinate.latitude as NSNumber
 			managedObject = getManagedObject(forKey: latitude)
+			
 		case .Ending:
 			guard let pin = managedObject else {
 				break
 			}
+			
 			let latitude = annotation.coordinate.latitude as NSNumber
 			let longitude = annotation.coordinate.longitude as NSNumber
 			pin.setValue(latitude, forKey: Keys.Latitude)
 			pin.setValue(longitude, forKey: Keys.Longitude)
+			
+			// Delete photos for previous location
 			pin.photos = nil
+			
 			CoreDataStackManager.sharedInstance.saveContext()
+			
 		default:
 			break
 		}
-	}
-	
-	// remove unused delegates
-	func mapView(mapView: MKMapView, didAddAnnotationViews views: [MKAnnotationView]) {
-		print("view added")
-	}
-	
-	func mapView(mapView: MKMapView, didSelectAnnotationView view: MKAnnotationView) {
-		print("select annotation")
-	}
-	
-	func mapView(mapView: MKMapView, annotationView view: MKAnnotationView, calloutAccessoryControlTapped control: UIControl) {
-		print("tapped callout")
-	}
-	
-	func mapView(mapView: MKMapView, didDeselectAnnotationView view: MKAnnotationView) {
-		print("deselect annotation")
 	}
 }

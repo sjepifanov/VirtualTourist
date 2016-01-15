@@ -25,6 +25,7 @@ class Photo: NSManagedObject {
 	@NSManaged var server: NSString
 	@NSManaged var id: NSString
 	@NSManaged var secret: NSString
+	@NSManaged var identifier: NSString
 	@NSManaged var imageURL: NSString
 	@NSManaged var location: Pin
 	
@@ -48,19 +49,18 @@ class Photo: NSManagedObject {
 		self.server = server
 		self.id = id
 		self.secret = secret
+		self.identifier = "\(id)_\(secret).jpg"
 		self.imageURL = "https://farm\(farm).staticflickr.com/\(server)/\(id)_\(secret)_\(Keys.size).jpg"
+		
 	}
 	
-	var identifier: String {
-		return "\(id)_\(secret).jpg"
-	}
-
+	// Image property with { get set } to retrieve/save files from/to Image Cache
 	var image: UIImage? {
 		get {
-			return FlickrManager.Caches.imageCache.imageWithIdentifier(identifier)
+			return FlickrManager.Caches.imageCache.imageWithIdentifier(identifier as String)
 		}
 		set {
-			FlickrManager.Caches.imageCache.storeImage(newValue, withIdentifier: identifier)
+			FlickrManager.Caches.imageCache.storeImage(newValue, withIdentifier: identifier as String)
 		}
 	}
 }

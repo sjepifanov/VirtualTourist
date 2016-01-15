@@ -11,7 +11,7 @@
 import CoreData
 
 extension PinDetailViewController: NSFetchedResultsControllerDelegate {
-	
+	// Add collectionView operations to Operation Block. Execute when all actions are done, from controllerDidChangeContent
 	private func addBlockOperations(processingBlock: () -> Void) {
 		blockOperations.append(NSBlockOperation(block: processingBlock))
 	}

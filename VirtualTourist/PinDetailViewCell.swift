@@ -14,13 +14,10 @@ class PinDetailViewCell: UICollectionViewCell {
 	@IBOutlet weak var activityIndicator: UIActivityIndicatorView!
 	@IBOutlet weak var cellImageView: UIImageView!
 	
+	// Cancel initiated download task when cell is reused
 	var taskToCancelifCellIsReused: NSURLSessionTask? {
 		didSet {
-			if let taskToCancel = oldValue {
-				print("Task Cancelled")
-				taskToCancel.cancel()
-			}
+			if let taskToCancel = oldValue { taskToCancel.cancel() }
 		}
 	}
-	
 }

@@ -26,29 +26,37 @@ class PinDetailViewController: UIViewController {
 	@IBOutlet weak var mapView: MKMapView!
 	@IBOutlet weak var removeRefreshButton: UIButton!
 	
+	// MARK: - Initializing Views and Layout
+	
 	override func viewDidLoad() {
 		super.viewDidLoad()
 		// collectionView Delegate and Data Source delegates are set in storyboard to PinDetailViewController
+		
 		// enable multiple cells selection
 		collectionView.allowsMultipleSelection = true
+		
 		// Switch off automatic inset on top of collectionView
 		automaticallyAdjustsScrollViewInsets = false
+		
+		// Render Map region in Pin Detail View
 		configureMapView(location)
+		
+		// Set button title and initial state
 		removeRefreshButton.enabled = false
 		removeRefreshButton.setTitle("New Collection", forState: .Normal)
+		
 		fetchedResultsController.delegate = self
+		
 		fetchPhotos()
-		print("Fetched objects: \(fetchedResultsController.fetchedObjects?.count)")
 	}
 	
 	override func viewWillAppear(animated: Bool) {
 		super.viewWillAppear(animated)
-
+		
+		// If there is no fetched photos request a new batch from Flickr
 		if let photos = location?.photos where photos.isEmpty {
-			print("Empty")
 			getPhotosByLatLon(location)
 		} else {
-			print("Some")
 			removeRefreshButton.enabled = true
 			collectionView.reloadData()
 		}
@@ -68,32 +76,11 @@ class PinDetailViewController: UIViewController {
 	}
 	
 	override func viewWillDisappear(animated: Bool) {
-		print("ViewWillDisappear")
-		// Deselect cells
+		// Deselect selected cells when view disappears
 		collectionView.selectItemAtIndexPath(nil, animated: true, scrollPosition: .None)
 	}
 	
-	// MARK: - Core Data Convenience
-	lazy var sharedContext: NSManagedObjectContext =  {
-		return CoreDataStackManager.sharedInstance.managedObjectContext
-	}()
-	
-	lazy var fetchedResultsController: NSFetchedResultsController = {
-		//TODO: - Change to struct values
-		let fetchRequest = NSFetchRequest(entityName: entityName)
-		// REplace sort descriptor with ENum key
-		fetchRequest.sortDescriptors = [NSSortDescriptor(key: Photo.Keys.id, ascending: true)]
-		let fetchResultController = NSFetchedResultsController(fetchRequest: fetchRequest,
-			managedObjectContext: self.sharedContext,
-			sectionNameKeyPath: nil,
-			cacheName: nil)
-		
-		return fetchResultController
-	}()
-	
-	func saveContext() {
-		CoreDataStackManager.sharedInstance.saveContext()
-	}
+	// MARK: - Action
 	
 	@IBAction func removeRefreshButtonAction(sender: AnyObject) {
 		if let selectedItems  = collectionView.indexPathsForSelectedItems() where selectedItems.isEmpty {
@@ -107,27 +94,26 @@ class PinDetailViewController: UIViewController {
 		saveContext()
 	}
 	
-	func deleteAllPhotos() {
-		guard let photos = fetchedResultsController.fetchedObjects as? [Photo] else {
-			return
-		}
-		photos.forEach { (photo: (Photo)) -> Void in
-			photo.image = nil
-			sharedContext.deleteObject(photo)
-		}
-	}
 	
-	func deleteSelectedPhotos() {
-		guard let selectedItems = collectionView.indexPathsForSelectedItems() else {
-			return
-		}
-		selectedItems.forEach { (indexPath:(NSIndexPath)) -> Void in
-			if let photo = fetchedResultsController.objectAtIndexPath(indexPath) as? Photo {
-				photo.image = nil
-				sharedContext.deleteObject(photo)
-			}
-		}
-	}
+	// MARK: - Core Data convenience properties
+	
+	lazy var sharedContext: NSManagedObjectContext =  {
+		return CoreDataStackManager.sharedInstance.managedObjectContext
+	}()
+	
+	lazy var fetchedResultsController: NSFetchedResultsController = {
+		let fetchRequest = NSFetchRequest(entityName: entityName)
+		
+		fetchRequest.sortDescriptors = [NSSortDescriptor(key: Photo.Keys.id, ascending: true)]
+		
+		let fetchResultController = NSFetchedResultsController(fetchRequest: fetchRequest,
+			managedObjectContext: self.sharedContext,
+			sectionNameKeyPath: nil,
+			cacheName: nil)
+		
+		return fetchResultController
+	}()
+
 	
 	// MARK: - Methods
 	
@@ -136,7 +122,6 @@ class PinDetailViewController: UIViewController {
 			pin = location,
 			lat = location?.valueForKey(Pin.Keys.Latitude) as? NSNumber,
 			lon = location?.valueForKey(Pin.Keys.Longitude) as? NSNumber else {
-				print("No Pin!")
 				return
 		}
 		let center = CLLocationCoordinate2D(latitude: lat as CLLocationDegrees, longitude: lon as CLLocationDegrees)
@@ -152,10 +137,11 @@ class PinDetailViewController: UIViewController {
 			pin = location,
 			lat = location?.valueForKey(Pin.Keys.Latitude) as? NSNumber,
 			lon = location?.valueForKey(Pin.Keys.Longitude) as? NSNumber else {
-				print("No Pin!")
 				return
 		}
+		
 		self.removeRefreshButton.enabled = false
+		
 		Queue.UserInitiated.execute { () -> Void in
 			FlickrManager.sharedInstance.getFlickrPhotoByLatLon(latitude: lat, longitude: lon) { data, error in
 				guard let data = data as? [[String : AnyObject]] else {
@@ -174,29 +160,60 @@ class PinDetailViewController: UIViewController {
 		}
 	}
 	
+	func deleteAllPhotos() {
+		guard let photos = fetchedResultsController.fetchedObjects as? [Photo] else {
+			return
+		}
+		
+		photos.forEach { (photo: (Photo)) -> Void in
+			// delete image files from caches
+			photo.image = nil
+			sharedContext.deleteObject(photo)
+		}
+	}
+	
+	func deleteSelectedPhotos() {
+		guard let selectedItems = collectionView.indexPathsForSelectedItems() else {
+			return
+		}
+		selectedItems.forEach { (indexPath:(NSIndexPath)) -> Void in
+			if let photo = fetchedResultsController.objectAtIndexPath(indexPath) as? Photo {
+				photo.image = nil
+				sharedContext.deleteObject(photo)
+			}
+		}
+	}
+	
+	
+	// MARK: - Collection view helpers
+	
+	// Fetch photos with predicate. Get photos for respective location
+	func fetchPhotos() -> Bool {
+		guard let pin = location else {
+			return false
+		}
+		
+		do {
+			fetchedResultsController.fetchRequest.predicate = NSPredicate(format: "location = %@", pin)
+			try fetchedResultsController.performFetch()
+		} catch {
+			return false
+		}
+		
+		return true
+	}
+	
+	func saveContext() {
+		CoreDataStackManager.sharedInstance.saveContext()
+	}
+	
 	func removeRefreshButtonState() {
+		// Change button title depending on cells selection
 		if let selectedItems = collectionView.indexPathsForSelectedItems() where !selectedItems.isEmpty {
 			self.removeRefreshButton.setTitle("Remove Selected Pictures", forState: .Normal)
 		} else {
 			self.removeRefreshButton.setTitle("New Collection", forState: .Normal)
 		}
 	}
-	
-	// MARK: - Collection view helpers
-	
-	func fetchPhotos() -> Bool {
-		guard let pin = location else {
-			return false
-		}
-		do {
-			fetchedResultsController.fetchRequest.predicate = NSPredicate(format: "location = %@", pin)
-			try fetchedResultsController.performFetch()
-		} catch {
-			print("Perform fetch. Unresolved error \(error)")
-			return false
-		}
-		return true
-	}
-	
-//EOF
+
 }

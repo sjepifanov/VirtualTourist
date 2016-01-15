@@ -23,10 +23,8 @@ class Pin: NSManagedObject {
 	// rather than to the enclosing declaration.
 	// This means that a type can access any private entities that are defined in the same source file as itself,
 	// but an extension cannot access that type’s private members if it’s defined in a separate source file.
-	
 	private(set) var innerCoordinate = CLLocationCoordinate2D(latitude: 0,longitude: 0)
 	
-	// Managed values
 	@NSManaged var latitude: NSNumber
 	@NSManaged var longitude: NSNumber
 	@NSManaged var photos: [Photo]?

@@ -46,22 +46,8 @@ enum Queue: ExecutableQueue {
 
 enum SerialQueue: String, ExecutableQueue {
 	case DownLoadImage = "VirtualTourist.SerialQueue.DownLoadImage"
-	//case UpLoadFile = "VirtualTourist.SerialQueue.UpLoadFile"
 	
 	var queue: dispatch_queue_t {
 		return dispatch_queue_create(rawValue, DISPATCH_QUEUE_SERIAL)
 	}
 }
-
-// MARK: - Example. Downloading something then could be written like this:
-/*
-Queue.UserInitiated.execute {
-	let url = NSURL(string: "http://image.jpg")!
-	let data = NSData(contentsOfURL: url)!
-	let image = UIImage(data: data)
-	
-	Queue.Main.execute {
-		imageView.image = image
-	}
-}
-*/

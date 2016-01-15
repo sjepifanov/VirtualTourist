@@ -10,7 +10,10 @@ import UIKit
 
 extension PinDetailViewController: UICollectionViewDelegate, UICollectionViewDataSource {
 	
+	// MARK: - Delegate Methods
+	
 	func numberOfSectionsInCollectionView(collectionView: UICollectionView) -> Int {
+		// Get number of sections
 		return fetchedResultsController.sections?.count ?? 0
 	}
 	
@@ -20,22 +23,20 @@ extension PinDetailViewController: UICollectionViewDelegate, UICollectionViewDat
 	}
 	
 	func collectionView(collectionView: UICollectionView, cellForItemAtIndexPath indexPath: NSIndexPath) -> UICollectionViewCell {
-		// TODO: - Force unwrap!!!
 		let photo = fetchedResultsController.objectAtIndexPath(indexPath) as! Photo
 		let cell = collectionView.dequeueReusableCellWithReuseIdentifier(cellIdentifier, forIndexPath: indexPath) as! PinDetailViewCell
+		
 		// check if cell is selected and set alpha appropriatelly. otherwise reused cells may appear as selected though actually not
 		cell.selected ? (cell.alpha = 0.5) : (cell.alpha = 1.0)
 		
+		// configure cell
 		configureCell(cell, photo: photo)
 		
 		return cell
 	}
 	
+	// Manage cell selection
 	func collectionView(collectionView: UICollectionView, didSelectItemAtIndexPath indexPath: NSIndexPath) {
-		
-		// TODO: - when at least one item is selected update UIButton title to "Delete Photos"(implement)
-		//print("Select cell at: \(indexPath)")
-		
 		if let cell = collectionView.cellForItemAtIndexPath(indexPath) {
 			cell.alpha = 0.5
 		}
@@ -44,21 +45,24 @@ extension PinDetailViewController: UICollectionViewDelegate, UICollectionViewDat
 	}
 	
 	func collectionView(collectionView: UICollectionView, didDeselectItemAtIndexPath indexPath: NSIndexPath) {
-		print("Deselect cell at: \(indexPath)")
 		if let cell = collectionView.cellForItemAtIndexPath(indexPath) {
 			cell.alpha = 1
 		}
-		// TODO: - Button state inconsitent! Verify!
+
 		removeRefreshButtonState()
 	}
+	
+	// MARK: - Configure Cell
 	
 	func configureCell(cell: PinDetailViewCell, photo: Photo) {
 		var image = UIImage(named: "placeHolder")
 		cell.layer.borderColor = UIColor.whiteColor().CGColor
 		cell.layer.borderWidth = 1
 		
+		// Set image to nil so reused cell won't appear with the same image
 		cell.cellImageView.image = nil
 		
+		// If image is cached, set it as cell image else download an image
 		if photo.image != nil {
 			image = photo.image
 		} else {
@@ -69,16 +73,20 @@ extension PinDetailViewController: UICollectionViewDelegate, UICollectionViewDat
 						print(error)
 						return
 					}
+					
 					let image = UIImage(data: imageData)
 					photo.image = image
+					
 					Queue.Main.execute { () -> Void in
 						cell.activityIndicator.stopAnimating()
 						cell.cellImageView.image = image
 					}
 				}
+				
 				cell.taskToCancelifCellIsReused = task
 			}
 		}
+		
 		cell.cellImageView?.image = image
 	}
 }

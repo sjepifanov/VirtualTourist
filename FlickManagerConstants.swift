@@ -32,9 +32,11 @@ extension FlickrManager {
 		static let Tag = "tag"
 		static let Tags = "tags"
 		static let Content = "_content"
-		static let Date = "2005-01-01"
+		static let Date = "2010-01-01"
 		static let PlaceID = "place_id"
 		static let WOE = "woeid"
+		static let SortBy = "interestingness-desc"
+		static let NumberOfPages = "4"
 	}
 	
 	struct MethodArguments {
@@ -55,6 +57,7 @@ extension FlickrManager {
 		static let PlaceID = "place_id"
 		static let WOE = "woeid"
 		static let MinUploadDat = "min_upload_date"
+		static let Sort = "sort"
 	}
 	
 }
