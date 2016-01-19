@@ -56,6 +56,7 @@ extension PinDetailViewController: UICollectionViewDelegate, UICollectionViewDat
 	
 	func configureCell(cell: PinDetailViewCell, photo: Photo) {
 		var image = UIImage(named: "placeHolder")
+		
 		cell.layer.borderColor = UIColor.whiteColor().CGColor
 		cell.layer.borderWidth = 1
 		
@@ -63,21 +64,33 @@ extension PinDetailViewController: UICollectionViewDelegate, UICollectionViewDat
 		cell.cellImageView.image = nil
 		
 		// If image is cached, set it as cell image else download an image
-		if photo.image != nil {
-			image = photo.image
+		if photo.image?.imageData != nil {
+			guard let imageData = photo.image?.imageData else {
+				return
+			}
+			image = UIImage(data: imageData)
 		} else {
 			cell.activityIndicator.startAnimating()
-			Queue.UserInitiated.execute { () -> Void in
-				let task = FlickrManager.sharedInstance.downloadImage(photo.imageURL as String) { imageData, error in
+			
+			//MOCQueue.WorkingWithMOC.barrier {
+				guard let
+					imageURL = photo.imageURL as? String,
+					identifier = photo.identifier as? String else {
+					return
+				}
+			Queue.UserInitiated.execute {
+				let task = FlickrManager.sharedInstance.downloadImage(imageURL) { imageData, error in
 					guard let imageData = imageData as? NSData else {
-						print(error)
 						return
 					}
 					
-					let image = UIImage(data: imageData)
-					photo.image = image
+					image = UIImage(data: imageData)
 					
-					Queue.Main.execute { () -> Void in
+					let imageBinary = ImageData(identifier: identifier, data: imageData, context: self.sharedContext)
+					imageBinary.photo = photo
+					photo.image = imageBinary
+					
+					Queue.Main.execute {
 						cell.activityIndicator.stopAnimating()
 						cell.cellImageView.image = image
 					}
@@ -87,6 +100,6 @@ extension PinDetailViewController: UICollectionViewDelegate, UICollectionViewDat
 			}
 		}
 		
-		cell.cellImageView?.image = image
+		cell.cellImageView.image = image
 	}
 }

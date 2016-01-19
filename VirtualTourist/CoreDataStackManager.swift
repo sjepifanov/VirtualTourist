@@ -56,7 +56,7 @@ class CoreDataStackManager {
 		// Initialize the NSManagedObjectContext, hand it the NSPersistentStoreCoordinator and return.
 		var managedObjectContext = NSManagedObjectContext(concurrencyType: .MainQueueConcurrencyType)
 		managedObjectContext.persistentStoreCoordinator = persistentStoreCoordinator
-		
+	
 		return managedObjectContext
 	}()
 	

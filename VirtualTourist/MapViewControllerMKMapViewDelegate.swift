@@ -48,28 +48,23 @@ extension MapViewController: MKMapViewDelegate {
 		guard let annotation = view.annotation else {
 			return
 		}
-		
 		// The Pin is draggable. Here we check for dragging state. When Drag started get managed object for current location
 		// When Drag ended update managed object with new coordinates.
 		switch newState {
 		case .Starting:
-			let latitude = annotation.coordinate.latitude as NSNumber
-			managedObject = getManagedObject(forKey: latitude)
+			let lat = annotation.coordinate.latitude as NSNumber
+			let lon = annotation.coordinate.longitude as NSNumber
+			
+			fetchPin(lat, longitude: lon)
 			
 		case .Ending:
-			guard let pin = managedObject else {
-				break
-			}
+			let lat = annotation.coordinate.latitude as NSNumber
+			let lon = annotation.coordinate.longitude as NSNumber
 			
-			let latitude = annotation.coordinate.latitude as NSNumber
-			let longitude = annotation.coordinate.longitude as NSNumber
-			pin.setValue(latitude, forKey: Keys.Latitude)
-			pin.setValue(longitude, forKey: Keys.Longitude)
-			
-			// Delete photos for previous location
-			pin.photos = nil
-			
-			CoreDataStackManager.sharedInstance.saveContext()
+			fetchedPin.setValue(lat, forKey: Keys.Latitude)
+			fetchedPin.setValue(lon, forKey: Keys.Longitude)
+
+			saveContext()
 			
 		default:
 			break

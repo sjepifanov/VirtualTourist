@@ -11,6 +11,10 @@ import CoreData
 import MapKit
 
 class MapViewController: UIViewController {
+	// Pin object property
+	lazy var fetchedPin: Pin = {
+		return Pin()
+	}()
 	
 	struct Keys {
 		static let Latitude = "latitude"
@@ -69,9 +73,9 @@ class MapViewController: UIViewController {
 		let annotation = Pin(dictionary: dictionary, context: sharedContext)
 		
 		mapView.addAnnotation(annotation)
-		/*
+		
 		// Prefetch photos for location. Task may interfere with Pin Detail View if Pin is placed and tapped in quick succession.
-		Queue.UserInitiated.execute { () -> Void in
+		Queue.Background.execute { () -> Void in
 			FlickrManager.sharedInstance.getFlickrPhotoByLatLon(
 				latitude: touchMapCoordinate.latitude as NSNumber,
 				longitude: touchMapCoordinate.longitude as NSNumber) { data, error in
@@ -90,7 +94,7 @@ class MapViewController: UIViewController {
 					Queue.Main.execute { self.saveContext() }
 			}
 		}
-		*/
+		
 	}
 	
 	@IBAction func handleTap(tapRecognizer: UITapGestureRecognizer) {
@@ -103,47 +107,36 @@ class MapViewController: UIViewController {
 			}
 			return
 		}
-		
 		guard let annotation = view.annotation else {
 			return
 		}
 		
-		// Get Managed Object
+		// Get Pin from Core Data
 		let latitude = annotation.coordinate.latitude as NSNumber
-		managedObject = getManagedObject(forKey: latitude)
-		guard let pin = managedObject else {
+		let longitude = annotation.coordinate.longitude as NSNumber
+		guard let _ = fetchPin(latitude, longitude: longitude) else {
 			return
 		}
 		
 		switch editing {
 		case true:
-			// Delete image files from disk cache
-			pin.photos?.forEach { $0.image = nil }
-			// Delete Pin Photos
-			pin.photos = nil
-			// Delete Pin
-			sharedContext.deleteObject(pin)
-			// Delete annotation from the map
+			deletePin()
 			mapView.removeAnnotation(annotation)
-			// Save context
-			CoreDataStackManager.sharedInstance.saveContext()
-		default:
+			saveContext()
+		case false:
 			// If not in editing mode open Pin Detail View controller
 			guard let
 				controller = storyboard?.instantiateViewControllerWithIdentifier("PinDetailViewController") as? PinDetailViewController else {
 					break
 			}
-			controller.location = pin
+			controller.pin = fetchedPin
 			showViewController(controller, sender: self)
 		}
 	}
 	
 	// MARK: - NSKeyedArchiver and CoreData convinience properties
 	
-	// Initilize managedObject as nil. Will be used in delegate methods
-	var managedObject: Pin? = nil
-	
-	// FilePath property
+	// FilePath property for mapRegionArchieve file
 	var filePath: String? {
 		let manager = NSFileManager.defaultManager()
 		guard let url = manager.URLsForDirectory(.DocumentDirectory, inDomains: .UserDomainMask).first as NSURL? else {
@@ -219,26 +212,24 @@ class MapViewController: UIViewController {
 		guard let filePath = filePath else {
 			return
 		}
-		
 		// If present, unarchive a dictionary
 		guard let regionDictionary = NSKeyedUnarchiver.unarchiveObjectWithFile(filePath) as? [String : NSNumber] else {
 			return
 		}
-		
 		guard let
-			latitude = regionDictionary[Keys.Latitude],
-			longitude = regionDictionary[Keys.Longitude],
-			latitudeDelta = regionDictionary[Keys.LatitudeDelta],
-			longitudeDelta = regionDictionary[Keys.LongitudeDelta] else {
+			lat = regionDictionary[Keys.Latitude] as? CLLocationDegrees,
+			lon = regionDictionary[Keys.Longitude] as? CLLocationDegrees,
+			latDelta = regionDictionary[Keys.LatitudeDelta] as? CLLocationDegrees,
+			lonDelta = regionDictionary[Keys.LongitudeDelta] as? CLLocationDegrees else {
 				return
 		}
-		
 		// Create coordinates for restored region
-		let center = CLLocationCoordinate2D(latitude: latitude as CLLocationDegrees, longitude: longitude as CLLocationDegrees)
-		let span = MKCoordinateSpan(latitudeDelta: latitudeDelta as CLLocationDegrees, longitudeDelta: longitudeDelta as CLLocationDegrees)
+		let center = CLLocationCoordinate2D(latitude: lat, longitude: lon)
+		let span = MKCoordinateSpan(latitudeDelta: latDelta, longitudeDelta: lonDelta)
 		let region = MKCoordinateRegion(center: center, span: span)
 		
 		// Set map coordinates to restored region
+		mapView.setCenterCoordinate(center, animated: animated)
 		mapView.setRegion(region, animated: animated)
 	}
 	
@@ -253,20 +244,45 @@ class MapViewController: UIViewController {
 	}
 	
 	// Get managed object for Key by executing fetch with predicate
-	func getManagedObject(forKey latitude: NSNumber) -> Pin? {
+	/**
+	Retrieve Pin Object from Core Data. Initialize lazy var fetchedPin: Pin with object. return nil if object not found.
+	
+	- parameters:
+		- latitude: NSNumber
+		- longitude: NSNumber
+	- returns:
+		Pin?
+	*/
+	func fetchPin(latitude: NSNumber, longitude: NSNumber) -> Pin? {
 		do {
 			fetchedResultsController.fetchRequest.fetchLimit = 1
-			fetchedResultsController.fetchRequest.predicate = NSPredicate(format: "latitude = %@", latitude)
+			fetchedResultsController.fetchRequest.predicate = NSPredicate(
+				format: "(latitude = %@) AND (longitude = %@)", latitude, longitude
+			)
 			try fetchedResultsController.performFetch()
 		} catch {
 			return nil
 		}
-		
-		guard let fetchedObject = fetchedResultsController.fetchedObjects?.first as? Pin else {
+		guard let pin = fetchedResultsController.fetchedObjects?.first as? Pin else {
 			return nil
 		}
 		
-		return fetchedObject
+		fetchedPin = pin
+		return pin
+	}
+	
+	/**
+	Delete Pin object:
+	
+	- Delete Photos Image files from cache.
+	- Delete Pin Photos object.
+	- Delete Pin from Core Data
+	
+	- Save Managed Context
+	*/
+	func deletePin() {
+		self.sharedContext.deleteObject(self.fetchedPin)
+		saveContext()
 	}
 	
 	// Create Annotations Array
@@ -275,12 +291,14 @@ class MapViewController: UIViewController {
 		guard let locations = fetchedResultsController.fetchedObjects as? [Pin] else {
 			return []
 		}
-		
 		// Add annotations to array
 		let annotations = locations.map { (location: (Pin)) -> MKPointAnnotation in
-			let coordinate = CLLocationCoordinate2D(latitude: location.latitude as CLLocationDegrees, longitude: location.longitude as CLLocationDegrees)
-			let annotation = MKPointAnnotation()
+			let coordinate = CLLocationCoordinate2D(
+				latitude: location.latitude as CLLocationDegrees,
+				longitude: location.longitude as CLLocationDegrees
+			)
 			
+			let annotation = MKPointAnnotation()
 			annotation.coordinate = coordinate
 			
 			return annotation

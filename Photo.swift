@@ -13,22 +13,25 @@ import UIKit
 class Photo: NSManagedObject {
 	
 	struct Keys {
-		static let imageURL = "imageURL"
+		static let entityName = "Photo"
 		static let farm = "farm"
 		static let server = "server"
-		static let secret = "secret"
 		static let id = "id"
+		static let secret = "secret"
 		static let size = "q"
+		static let imageURL = "imageURL"
+
 	}
 	
-	@NSManaged var farm: NSString
-	@NSManaged var server: NSString
-	@NSManaged var id: NSString
-	@NSManaged var secret: NSString
-	@NSManaged var identifier: NSString
-	@NSManaged var imageURL: NSString
+	@NSManaged var farm: NSString?
+	@NSManaged var server: NSString?
+	@NSManaged var id: NSString?
+	@NSManaged var secret: NSString?
+	@NSManaged var identifier: NSString?
+	@NSManaged var imageURL: NSString?
 	@NSManaged var location: Pin
-	
+	@NSManaged var image: ImageData?
+
 	override init(entity: NSEntityDescription, insertIntoManagedObjectContext context: NSManagedObjectContext?) {
 		super.init(entity: entity, insertIntoManagedObjectContext: context)
 	}
@@ -38,6 +41,7 @@ class Photo: NSManagedObject {
 			fatalError("Unable to load context")
 		}
 		super.init(entity: entity, insertIntoManagedObjectContext: context)
+		
 		guard let
 			farm = dictionary[Keys.farm],
 			server = dictionary[Keys.server],
@@ -45,6 +49,7 @@ class Photo: NSManagedObject {
 			secret = dictionary[Keys.secret] else {
 			return
 		}
+		
 		self.farm = farm
 		self.server = server
 		self.id = id
@@ -54,7 +59,9 @@ class Photo: NSManagedObject {
 		
 	}
 	
+	
 	// Image property with { get set } to retrieve/save files from/to Image Cache
+	/*
 	var image: UIImage? {
 		get {
 			return FlickrManager.Caches.imageCache.imageWithIdentifier(identifier as String)
@@ -63,4 +70,5 @@ class Photo: NSManagedObject {
 			FlickrManager.Caches.imageCache.storeImage(newValue, withIdentifier: identifier as String)
 		}
 	}
+	*/
 }

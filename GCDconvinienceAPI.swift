@@ -19,6 +19,18 @@ extension ExecutableQueue {
 	func execute(closure: () -> Void) {
 		dispatch_async(queue, closure)
 	}
+	
+	func executeSync(closure: () -> Void) {
+		dispatch_sync(queue, closure)
+	}
+	
+	func barrier(closure: () -> Void) {
+		dispatch_barrier_async(queue, closure)
+	}
+	
+	func barrierSync(closure: () -> Void) {
+		dispatch_barrier_sync(queue, closure)
+	}
 }
 
 enum Queue: ExecutableQueue {
@@ -42,6 +54,15 @@ enum Queue: ExecutableQueue {
 			return dispatch_get_global_queue(QOS_CLASS_BACKGROUND, 0)
 		}
 	}
+}
+
+enum MOCQueue: String, ExecutableQueue {
+	case WorkingWithMOC = "VirtualTouris.ConcurrentQueue.WorkingWithMOC"
+	
+	var queue: dispatch_queue_t {
+		return dispatch_queue_create(rawValue, DISPATCH_QUEUE_CONCURRENT)
+	}
+	
 }
 
 enum SerialQueue: String, ExecutableQueue {

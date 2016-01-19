@@ -11,11 +11,6 @@ import SystemConfiguration
 
 class FlickrManager {
 	
-	// Initialize shared instance for Image Cache
-	struct Caches {
-		static let imageCache = ImageCache()
-	}
-	
 	typealias CompletionClosure = (AnyObject?, String?) -> Void
 	
 	// Initialize FlickrManager shared instance
@@ -40,19 +35,23 @@ class FlickrManager {
 	*/
 	func sendRequest(request: NSMutableURLRequest, handler: CompletionClosure) {
 		let urlSession = NSURLSession(configuration: sessionConfiguration, delegate: nil, delegateQueue: nil)
+		
 		let sessionTask = urlSession.dataTaskWithRequest(request) { (data, response, error) in
 			guard let data = data else {
 				if let error = error {
 					return handler(nil, error.localizedDescription)
 				} else {
-					return handler(nil, "Request contains no data")
+					return handler(nil, "No data recieved")
 				}
 			}
-			guard let parsedData = self.parse(fromData: data) else {
+			
+			guard let parsedData = try? NSJSONSerialization.JSONObjectWithData(data, options: .AllowFragments) else {
 				return handler(nil, "Error serializing data")
 			}
+			
 			handler(parsedData, nil)
 		}
+		
 		sessionTask.resume()
 	}
 	
@@ -67,58 +66,27 @@ class FlickrManager {
 		guard let url = NSURL(string: url) else {
 			return nil
 		}
+		
 		let request = NSMutableURLRequest(URL: url)
 		let urlSession = NSURLSession(configuration: sessionConfiguration, delegate: nil, delegateQueue: nil)
-		let sessionTask = urlSession.dataTaskWithRequest(request) {
-			(data, response, error) in
+		
+		let sessionTask = urlSession.dataTaskWithRequest(request) { (data, response, error) in
 			guard let data = data else {
 				if let error = error {
 					return handler(nil, error.localizedDescription)
 				} else {
-					return handler(nil, "Empty request")
+					return handler(nil, "No data recieved")
 				}
 			}
+			
 			handler(data, nil)
 		}
+		
 		sessionTask.resume()
 		return sessionTask
 	}
 	
 	// MARK: - Helpers
-	
-	/**
-	Serialize JSON Object with Data
-	
-	- parameters:
-	- fromData: NSData
-	- returns:
-	AnyObject?
-	*/
-	private func parse(fromData data: NSData) -> AnyObject? {
-		var parsedData: AnyObject?
-		do {
-			parsedData = try NSJSONSerialization.JSONObjectWithData(data, options: .AllowFragments)
-		} catch {
-			return nil
-		}
-		return parsedData
-	}
-	
-	// Taken from http://stackoverflow.com/questions/27148100/how-to-escape-the-http-params-in-swift/27151324#27151324
-	/**
-	Escape HTTP parameters
-	
-	- parameters:
-		- dictionary: [String : AnyObject]
-	- returns:
-		String
-	*/
-	private func dictionaryToQueryString(dictionary: [String : AnyObject]) -> String {
-		let queryItems = dictionary.map { NSURLQueryItem(name: $0, value: $1 as? String) }
-		let components = NSURLComponents()
-		components.queryItems = queryItems
-		return components.percentEncodedQuery ?? ""
-	}
 	
 	/**
 	Prepare Task Request
@@ -136,15 +104,35 @@ class FlickrManager {
 			MethodArguments.DataFormat : Keys.DataFormat,
 			MethodArguments.NoJSONCallback : Keys.NoJSONCallback,
 		]
+		
 		// add values from dictionary to mutable methodArguments dictionary
-		for (key, value) in dictionary {
-			methodArguments.updateValue(value, forKey: key)
-		}
+		dictionary.forEach { methodArguments.updateValue($1, forKey: $0) }
+
 		let urlString = Keys.HTTPS + "?" + dictionaryToQueryString(methodArguments)
+
 		guard let url = NSURL(string: urlString) else {
 			return nil
 		}
+		
 		return NSMutableURLRequest(URL: url)
+	}
+	
+	// Taken from http://stackoverflow.com/questions/27148100/how-to-escape-the-http-params-in-swift/27151324#27151324
+	/**
+	Escape HTTP parameters
+	
+	- parameters:
+		- dictionary: [String : AnyObject]
+		- returns:
+		String
+	*/
+	private func dictionaryToQueryString(dictionary: [String : AnyObject]) -> String {
+		let queryItems = dictionary.map { NSURLQueryItem(name: $0, value: $1 as? String) }
+		let components = NSURLComponents()
+		
+		components.queryItems = queryItems
+		
+		return components.percentEncodedQuery ?? ""
 	}
 	
 	// MARK: - Network Connection Check

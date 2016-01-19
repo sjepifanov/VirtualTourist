@@ -17,6 +17,7 @@ extension PinDetailViewController: NSFetchedResultsControllerDelegate {
 	}
 	
 	func controllerWillChangeContent(controller: NSFetchedResultsController) {
+		// Clear blockOperations array before adding new ones
 		blockOperations.removeAll(keepCapacity: false)	}
 	
 	func controller(controller: NSFetchedResultsController, didChangeSection sectionInfo: NSFetchedResultsSectionInfo, atIndex sectionIndex: Int, forChangeType type: NSFetchedResultsChangeType) {
@@ -36,20 +37,26 @@ extension PinDetailViewController: NSFetchedResultsControllerDelegate {
 	func controller(controller: NSFetchedResultsController, didChangeObject anObject: AnyObject, atIndexPath indexPath: NSIndexPath?, forChangeType type: NSFetchedResultsChangeType, newIndexPath: NSIndexPath?) {
 		switch type {
 		case .Insert:
-			addBlockOperations { self.collectionView.insertItemsAtIndexPaths([newIndexPath!]) }
+			guard let newIndexPath = newIndexPath else { break }
+			addBlockOperations { self.collectionView.insertItemsAtIndexPaths([newIndexPath]) }
 		case .Update:
-			addBlockOperations { self.collectionView.reloadItemsAtIndexPaths([newIndexPath!]) }
+			guard let newIndexPath = newIndexPath else { break }
+			addBlockOperations { self.collectionView.reloadItemsAtIndexPaths([newIndexPath]) }
 		case .Move:
-			addBlockOperations { self.collectionView.moveItemAtIndexPath(indexPath!, toIndexPath: newIndexPath!) }
+			guard let indexPath = indexPath, newIndexPath = newIndexPath else { break }
+			addBlockOperations { self.collectionView.moveItemAtIndexPath(indexPath, toIndexPath: newIndexPath) }
 		case .Delete:
-			addBlockOperations { self.collectionView.deleteItemsAtIndexPaths([indexPath!]) }
+			guard let indexPath = indexPath else { break }
+			addBlockOperations { self.collectionView.deleteItemsAtIndexPaths([indexPath]) }
 		}
 	}
 	
 	func controllerDidChangeContent(controller: NSFetchedResultsController) {
 		collectionView.performBatchUpdates({ () -> Void in
+			// Execute all operations added to blockOperations array
 			self.blockOperations.forEach { $0.start() }
 			}, completion: { (finished) -> Void in
+				// Clear blockOperations array when all opeartions are finished
 				self.blockOperations.removeAll(keepCapacity: false)
 		})
 	}
