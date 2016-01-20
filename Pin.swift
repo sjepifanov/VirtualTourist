@@ -19,11 +19,8 @@ class Pin: NSManagedObject {
 	
 	// Initilalize innerCoordinates.
 	// We will use it in Pin class extension for conformance with MKAnnotation protocol
-	// Private access in Swift differs from private access in most other languages, as it’s scoped to the enclosing source file
-	// rather than to the enclosing declaration.
-	// This means that a type can access any private entities that are defined in the same source file as itself,
-	// but an extension cannot access that type’s private members if it’s defined in a separate source file.
-	private(set) var innerCoordinate = CLLocationCoordinate2D(latitude: 0,longitude: 0)
+	
+	private var innerCoordinate = CLLocationCoordinate2D(latitude: 0,longitude: 0)
 	
 	@NSManaged var latitude: NSNumber
 	@NSManaged var longitude: NSNumber

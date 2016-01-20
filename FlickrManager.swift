@@ -22,7 +22,11 @@ class FlickrManager {
 	private init() {
 		session = NSURLSession.sharedSession()
 		sessionConfiguration = NSURLSessionConfiguration.defaultSessionConfiguration()
+		//sessionConfiguration.timeoutIntervalForRequest = 30
+		//sessionConfiguration.timeoutIntervalForResource = 120
 	}
+	
+	
 	
 	// MARK: - Tasks
 	
@@ -37,6 +41,7 @@ class FlickrManager {
 		let urlSession = NSURLSession(configuration: sessionConfiguration, delegate: nil, delegateQueue: nil)
 		
 		let sessionTask = urlSession.dataTaskWithRequest(request) { (data, response, error) in
+			print(response)
 			guard let data = data else {
 				if let error = error {
 					return handler(nil, error.localizedDescription)
@@ -67,9 +72,8 @@ class FlickrManager {
 			return nil
 		}
 		
-		let request = NSMutableURLRequest(URL: url)
 		let urlSession = NSURLSession(configuration: sessionConfiguration, delegate: nil, delegateQueue: nil)
-		
+		let request = NSMutableURLRequest(URL: url)
 		let sessionTask = urlSession.dataTaskWithRequest(request) { (data, response, error) in
 			guard let data = data else {
 				if let error = error {

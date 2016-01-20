@@ -42,7 +42,7 @@ extension FlickrManager {
 			guard let photos = data.valueForKeyPath(Keys.Photos + "." + Keys.Photo) as? [[String : AnyObject]] else {
 				return handler(nil, "No photos found.")
 			}
-			
+						
 			handler(photos, nil)
 		}
 	}

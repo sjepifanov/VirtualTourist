@@ -65,6 +65,7 @@ class CoreDataStackManager {
 	
 	func saveContext() {
 		if !managedObjectContext.hasChanges { return }
+		
 		do {
 			try managedObjectContext.save()
 		} catch let error as NSError {

@@ -41,18 +41,21 @@ class PinDetailViewController: UIViewController {
 		// Render Map region in Pin Detail View
 		configureMapView()
 		
+		sharedContext.shouldDeleteInaccessibleFaults = true
+		
 		// Set button title and initial state
 		removeRefreshButton.enabled = false
 		removeRefreshButton.setTitle("New Collection", forState: .Normal)
 		
 		fetchedResultsController.delegate = self
-
-		coreDataQueueSetUp()
+		
+		NSNotificationCenter.defaultCenter().addObserver(self, selector: "contextDidSaveContext:", name: NSManagedObjectContextDidSaveNotification, object: nil)
 		
 		self.fetchPhotos()
-		if let photos = self.pin.photos {
-			self.fetchBinaryData(photos)
-		}
+		//if let photos = self.pin.photos {
+		//	self.fetchBinaryData(photos)
+		//}
+		
 	}
 	
 	override func viewWillAppear(animated: Bool) {
@@ -61,7 +64,6 @@ class PinDetailViewController: UIViewController {
 		if let photos = pin.photos where photos.isEmpty {
 			self.getPhotosByLatLon()
 		} else {
-			//collectionView.reloadData()
 			removeRefreshButton.enabled = true
 		}
 	}
@@ -84,8 +86,7 @@ class PinDetailViewController: UIViewController {
 	override func viewWillDisappear(animated: Bool) {
 		// Deselect selected cells when view disappears
 		collectionView.selectItemAtIndexPath(nil, animated: false, scrollPosition: .None)
-		// fetchedResultsController.delegate = nil
-
+		NSNotificationCenter.defaultCenter().removeObserver(self)
 		saveContext()
 	}
 	
@@ -94,17 +95,13 @@ class PinDetailViewController: UIViewController {
 	@IBAction func removeRefreshButtonAction(sender: AnyObject) {
 		if let selectedItems  = collectionView.indexPathsForSelectedItems() where selectedItems.isEmpty {
 			FlickrManager.sharedInstance.session.invalidateAndCancel()
-			blockOperations.removeAll(keepCapacity: false)
-			sharedContext.refreshAllObjects()
-			saveContext()
-
-				self.deleteAllPhotos()
-				self.getPhotosByLatLon()
+			
+			deleteAllPhotos()
+			getPhotosByLatLon()
+			
 		} else {
 			FlickrManager.sharedInstance.session.invalidateAndCancel()
-			blockOperations.removeAll(keepCapacity: false)
-			sharedContext.refreshAllObjects()
-			saveContext()
+			
 			deleteSelectedPhotos()
 			collectionView.selectItemAtIndexPath(nil, animated: false, scrollPosition: .None)
 			removeRefreshButtonState()
@@ -128,13 +125,14 @@ class PinDetailViewController: UIViewController {
 			fetchRequest: fetchRequest,
 			managedObjectContext: self.sharedContext,
 			sectionNameKeyPath: nil,
-			cacheName: nil
+			cacheName: "rootCache"
 		)
 		
 		return fetchResultController
 	}()
 	
 	// Fetched Result Controller for "ImageBinary" entity with cache
+	/*
 	lazy var fetchedResultsControllerImageBinary: NSFetchedResultsController = {
 		let fetchRequest = NSFetchRequest(entityName: ImageData.Keys.Entity)
 		
@@ -143,12 +141,13 @@ class PinDetailViewController: UIViewController {
 		let fetchResultController = NSFetchedResultsController(
 			fetchRequest: fetchRequest,
 			managedObjectContext: self.sharedContext,
-			sectionNameKeyPath: ImageData.Keys.SectionNameKeyPath,
+			sectionNameKeyPath: nil,
 			cacheName: ImageData.Keys.CacheName
 		)
 		
 		return fetchResultController
 	}()
+	*/
 	
 	// MARK: - Methods
 	
@@ -181,18 +180,22 @@ class PinDetailViewController: UIViewController {
 		removeRefreshButton.enabled = false
 		
 		FlickrManager.sharedInstance.getFlickrPhotoByLatLon(latitude: lat, longitude: lon) { data, error in
+			defer {
+				Queue.Main.execute {
+					self.saveContext()
+					self.sharedContext.refreshAllObjects()
+				}
+			}
+			
 			guard let data = data as? [[String : AnyObject]] else {
 				return
 			}
 			
 			let photosDictionary = FlickrManager.sharedInstance.parsePhotosDictionary(data)
 			
-			Queue.Main.execute {
-				photosDictionary.forEach { (dictionary: [String : NSString]) -> () in
-					let photo = Photo(dictionary: dictionary, context: self.sharedContext)
-					photo.location = self.pin
-				}
-				Queue.Main.execute { self.removeRefreshButton.enabled = true }
+			photosDictionary.forEach { (dictionary: [String : NSString]) -> () in
+				let photo = Photo(dictionary: dictionary, context: self.sharedContext)
+				photo.location = self.pin
 			}
 		}
 	}
@@ -202,38 +205,26 @@ class PinDetailViewController: UIViewController {
 			return
 		}
 		
-		//MOCQueue.WorkingWithMOC.barrier {
-		sharedContext.performBlockAndWait {
-			photos.forEach {
-				self.sharedContext.deleteObject($0)
-				//self.sharedContext.refreshObject($0, mergeChanges: false)
-			}
+		photos.forEach {
+			self.sharedContext.deleteObject($0)
 		}
-			//Queue.Main.execute {
-			//	self.collectionView.reloadData()
-			//	self.saveContext()
-			//}
-		//}
+		saveContext()
+		sharedContext.refreshAllObjects()
+		
 	}
 	
 	func deleteSelectedPhotos() {
 		guard let selectedItems = collectionView.indexPathsForSelectedItems() else {
 			return
 		}
-		
-		//MOCQueue.WorkingWithMOC.barrier {
-			selectedItems.forEach { (indexPath:(NSIndexPath)) -> Void in
-				if let photo = self.fetchedResultsController.objectAtIndexPath(indexPath) as? Photo {
-					self.sharedContext.deleteObject(photo)
-					//self.sharedContext.refreshObject(photo, mergeChanges: true)
-				}
+		selectedItems.forEach { (indexPath:(NSIndexPath)) -> Void in
+			if let photo = self.fetchedResultsController.objectAtIndexPath(indexPath) as? Photo {
+				self.sharedContext.deleteObject(photo)
 			}
-			//Queue.Main.execute {
-			//	self.collectionView.reloadData()
-			//	self.saveContext()
-			//}
-		//self.sharedContext.refreshAllObjects()
-		//}
+		}
+		saveContext()
+		sharedContext.refreshAllObjects()
+		
 	}
 	
 	
@@ -241,67 +232,40 @@ class PinDetailViewController: UIViewController {
 	
 	// Fetch photos with predicate. Get photos for respective location
 	func fetchPhotos() {
-			do {
-				self.fetchedResultsController.fetchRequest.predicate = NSPredicate(format: "location = %@", self.pin)
-				try self.fetchedResultsController.performFetch()
-			} catch {
-				return
-			}
-	}
-	
-	/*
-	func fetchPhotos() -> Bool {
-		
+		NSFetchedResultsController.deleteCacheWithName("rootCache")
 		do {
-			fetchedResultsController.fetchRequest.predicate = NSPredicate(format: "location = %@", pin)
-			try fetchedResultsController.performFetch()
+			self.fetchedResultsController.fetchRequest.predicate = NSPredicate(format: "location = %@", self.pin)
+			try self.fetchedResultsController.performFetch()
 		} catch {
-			return false
-		}
-		
-		return true
-	}
-	*/
-	
-	// Fetch image binary date for location photos
-	func fetchBinaryData(photos: [Photo]) {
-		// Clear cache before making another fetch request
-		NSFetchedResultsController.deleteCacheWithName(ImageData.Keys.CacheName)
-			photos.forEach { (photo: (Photo)) -> Void in
-				do {
-					self.fetchedResultsControllerImageBinary.fetchRequest.predicate = NSPredicate(format: "photo = %@", photo)
-					try self.fetchedResultsControllerImageBinary.performFetch()
-				} catch {
-					return
-				}
-			}
-	}
-	
-	/*
-	func fetchBinaryData(photos: [Photo]) {
-		// Clear cache before making another fetch request
-		NSFetchedResultsController.deleteCacheWithName(ImageData.Keys.CacheName)
-		
-		photos.forEach { (photo: (Photo)) -> Void in
-			do {
-				fetchedResultsControllerImageBinary.fetchRequest.predicate = NSPredicate(format: "photo = %@", photo)
-				try fetchedResultsControllerImageBinary.performFetch()
-			} catch {
-				return
-			}
 			return
 		}
+		collectionView.reloadData()
+	}
+	
+	// Fetch image binary date for location photos
+	/*
+	func fetchBinaryData(photos: [Photo]) {
+		// Clear cache before making another fetch request
+		NSFetchedResultsController.deleteCacheWithName(ImageData.Keys.CacheName)
+		photos.forEach { (photo: (Photo)) -> Void in
+			do {
+				self.fetchedResultsControllerImageBinary.fetchRequest.predicate = NSPredicate(format: "photo = %@", photo)
+				try self.fetchedResultsControllerImageBinary.performFetch()
+			} catch {
+				return
+			}
+		}
 	}
 	*/
+	func contextDidSaveContext (notification: NSNotification) {
+		print("!!!!!CONTEXT SAVED!!!!!!")
+		if !removeRefreshButton.enabled {
+			removeRefreshButton.enabled = true
+		}
+	}
 	
 	func saveContext() {
 		CoreDataStackManager.sharedInstance.saveContext()
-	}
-	
-	func coreDataQueueSetUp() {
-		//MOCQueue.WorkingWithMOC.execute {
-		//self.sharedContext
-		//}
 	}
 	
 	func removeRefreshButtonState() {

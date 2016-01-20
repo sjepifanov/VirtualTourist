@@ -56,8 +56,8 @@ enum Queue: ExecutableQueue {
 	}
 }
 
-enum MOCQueue: String, ExecutableQueue {
-	case WorkingWithMOC = "VirtualTouris.ConcurrentQueue.WorkingWithMOC"
+enum ConcurerentQueue: String, ExecutableQueue {
+	case SharedContext = "VirtualTouris.ConcurrentQueue.SharedContext"
 	
 	var queue: dispatch_queue_t {
 		return dispatch_queue_create(rawValue, DISPATCH_QUEUE_CONCURRENT)

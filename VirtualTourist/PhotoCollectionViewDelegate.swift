@@ -71,8 +71,6 @@ extension PinDetailViewController: UICollectionViewDelegate, UICollectionViewDat
 			image = UIImage(data: imageData)
 		} else {
 			cell.activityIndicator.startAnimating()
-			
-			//MOCQueue.WorkingWithMOC.barrier {
 				guard let
 					imageURL = photo.imageURL as? String,
 					identifier = photo.identifier as? String else {
@@ -86,13 +84,14 @@ extension PinDetailViewController: UICollectionViewDelegate, UICollectionViewDat
 					
 					image = UIImage(data: imageData)
 					
-					let imageBinary = ImageData(identifier: identifier, data: imageData, context: self.sharedContext)
-					imageBinary.photo = photo
-					photo.image = imageBinary
-					
 					Queue.Main.execute {
 						cell.activityIndicator.stopAnimating()
 						cell.cellImageView.image = image
+						let imageBinary = ImageData(identifier: identifier, data: imageData, context: self.sharedContext)
+						imageBinary.photo = photo
+						photo.image = imageBinary
+						self.saveContext()
+						self.sharedContext.refreshAllObjects()
 					}
 				}
 				

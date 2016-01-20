@@ -74,6 +74,7 @@ class MapViewController: UIViewController {
 		
 		mapView.addAnnotation(annotation)
 		
+		/*
 		// Prefetch photos for location. Task may interfere with Pin Detail View if Pin is placed and tapped in quick succession.
 		Queue.Background.execute { () -> Void in
 			FlickrManager.sharedInstance.getFlickrPhotoByLatLon(
@@ -94,6 +95,7 @@ class MapViewController: UIViewController {
 					Queue.Main.execute { self.saveContext() }
 			}
 		}
+		*/
 		
 	}
 	

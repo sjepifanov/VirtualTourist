@@ -21,7 +21,7 @@ class ImageData: NSManagedObject {
 	
 	@NSManaged var imageData: NSData?
 	@NSManaged var identifier: String
-	@NSManaged var photo: Photo
+	@NSManaged var photo: Photo?
 	
 	override init(entity: NSEntityDescription, insertIntoManagedObjectContext context: NSManagedObjectContext?) {
 		super.init(entity: entity, insertIntoManagedObjectContext: context)
@@ -29,7 +29,7 @@ class ImageData: NSManagedObject {
 	
 	init(identifier: String, data: NSData, context: NSManagedObjectContext) {
 		guard let entity = NSEntityDescription.entityForName(Keys.Entity, inManagedObjectContext: context) else {
-			fatalError("Unable to load context")
+			fatalError("Unable to access entity")
 		}
 		super.init(entity: entity, insertIntoManagedObjectContext: context)
 		self.identifier = identifier
