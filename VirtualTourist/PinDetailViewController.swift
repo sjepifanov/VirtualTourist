@@ -54,6 +54,7 @@ class PinDetailViewController: UIViewController {
 		// Add observer on sharedContext did Save Notification
 		NSNotificationCenter.defaultCenter().addObserver(self, selector: "contextDidSaveContext:", name: NSManagedObjectContextDidSaveNotification, object: nil)
 		
+		FlickrManager.sharedInstance.session.invalidateAndCancel()
 		fetchPhotos()
 	}
 	
