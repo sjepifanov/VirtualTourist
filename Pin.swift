@@ -15,16 +15,17 @@ class Pin: NSManagedObject {
 	struct Keys {
 		static let Latitude = "latitude"
 		static let Longitude = "longitude"
+		static let CacheName = "pinCache"
 	}
-	
-	// Initilalize innerCoordinates.
-	// We will use it in Pin class extension for conformance with MKAnnotation protocol
-	
-	private var innerCoordinate = CLLocationCoordinate2D(latitude: 0,longitude: 0)
 	
 	@NSManaged var latitude: NSNumber
 	@NSManaged var longitude: NSNumber
+	
 	@NSManaged var photos: [Photo]?
+	
+	// Initilalize private var innerCoordinates.
+	// We will use it in Pin class extension for conformance with MKAnnotation protocol
+	private var innerCoordinate = CLLocationCoordinate2D(latitude: 0,longitude: 0)
 	
 	override init(entity: NSEntityDescription, insertIntoManagedObjectContext context: NSManagedObjectContext?) {
 		super.init(entity: entity, insertIntoManagedObjectContext: context)
@@ -32,18 +33,18 @@ class Pin: NSManagedObject {
 	
 	init(dictionary: [String : NSNumber], context: NSManagedObjectContext) {
 		guard let entity = NSEntityDescription.entityForName("Pin", inManagedObjectContext: context) else {
-			// TODO - Add proper error handling!
-			fatalError("Can not initialize Pin entity!")
+			fatalError("Unable to initialize Pin entity!")
 		}
 		super.init(entity: entity, insertIntoManagedObjectContext: context)
 		guard let
 			lat = dictionary[Keys.Latitude],
 			lon = dictionary[Keys.Longitude] else {
-				fatalError("Can not initialize Pin entity!")
-				//return
+				return
 		}
+		
 		latitude = lat
 		longitude = lon
+		
 		innerCoordinate = CLLocationCoordinate2D(latitude: latitude as CLLocationDegrees, longitude: longitude as CLLocationDegrees )
 	}
 }

@@ -22,11 +22,9 @@ class FlickrManager {
 	private init() {
 		session = NSURLSession.sharedSession()
 		sessionConfiguration = NSURLSessionConfiguration.defaultSessionConfiguration()
-		//sessionConfiguration.timeoutIntervalForRequest = 30
-		//sessionConfiguration.timeoutIntervalForResource = 120
+		sessionConfiguration.timeoutIntervalForRequest = 30
+		sessionConfiguration.timeoutIntervalForResource = 120
 	}
-	
-	
 	
 	// MARK: - Tasks
 	
@@ -41,7 +39,6 @@ class FlickrManager {
 		let urlSession = NSURLSession(configuration: sessionConfiguration, delegate: nil, delegateQueue: nil)
 		
 		let sessionTask = urlSession.dataTaskWithRequest(request) { (data, response, error) in
-			print(response)
 			guard let data = data else {
 				if let error = error {
 					return handler(nil, error.localizedDescription)
@@ -133,7 +130,6 @@ class FlickrManager {
 	private func dictionaryToQueryString(dictionary: [String : AnyObject]) -> String {
 		let queryItems = dictionary.map { NSURLQueryItem(name: $0, value: $1 as? String) }
 		let components = NSURLComponents()
-		
 		components.queryItems = queryItems
 		
 		return components.percentEncodedQuery ?? ""
@@ -155,7 +151,7 @@ class FlickrManager {
 		SCNetworkReachabilityGetFlags(reachabilityRef!, &flags)
 		let reachable: Bool = (flags.rawValue & SCNetworkReachabilityFlags.Reachable.rawValue) != 0
 		let needsConnection: Bool = (flags.rawValue & SCNetworkReachabilityFlags.ConnectionRequired.rawValue) != 0
-		if reachable && needsConnection {
+		if reachable && !needsConnection {
 			//what type of connection is available
 			let isCellularConnection = (flags.rawValue & SCNetworkReachabilityFlags.IsWWAN.rawValue) != 0
 			if isCellularConnection {

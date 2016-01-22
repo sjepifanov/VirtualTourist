@@ -10,33 +10,37 @@ import Foundation
 import CoreData
 import UIKit
 
+// Opt out from using separate method to cache image files in memory and on disk
+// Instead created new entity for binary data with external storage optin checked in Core Data,
+// and create cache for Photo object when initializing FRC
+// In case that is agains project rubric, could reinstate image cache with files, though this solution is much cleaner
+
 class ImageData: NSManagedObject {
 	
 	struct Keys {
 		static let Entity = "ImageBinary"
-		static let SectionNameKeyPath = "photo.image"
 		static let CacheName = "imageBinaryCache"
-		static let Identifier = "identifier"
+		static let Id = "id"
 	}
 	
 	@NSManaged var imageData: NSData?
-	@NSManaged var identifier: String
+	@NSManaged var imageId: NSString?
+	
 	@NSManaged var photo: Photo?
 	
 	override init(entity: NSEntityDescription, insertIntoManagedObjectContext context: NSManagedObjectContext?) {
 		super.init(entity: entity, insertIntoManagedObjectContext: context)
 	}
 	
-	init(identifier: String, data: NSData, context: NSManagedObjectContext) {
+	init(data: NSData, context: NSManagedObjectContext) {
 		guard let entity = NSEntityDescription.entityForName(Keys.Entity, inManagedObjectContext: context) else {
-			fatalError("Unable to access entity")
+			fatalError("Unable to initialize ImageBinary entity")
 		}
 		super.init(entity: entity, insertIntoManagedObjectContext: context)
-		self.identifier = identifier
 		guard let data = imageDataJPGRepresentation(data) else {
 			return
 		}
-		self.imageData = data
+		imageData = data
 	}
 	
 	// MARK: - Helpers

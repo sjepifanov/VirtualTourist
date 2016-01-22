@@ -35,7 +35,7 @@ extension FlickrManager {
 		static let Date = "2010-01-01"
 		static let PlaceID = "place_id"
 		static let WOE = "woeid"
-		static let SortBy = "interestingness-desc"
+		static let SortBy = "interestingness-desc,relevance,date-posted-desc"
 		static let NumberOfPages = "4"
 	}
 	

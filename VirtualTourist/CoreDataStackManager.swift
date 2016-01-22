@@ -23,13 +23,11 @@ class CoreDataStackManager {
 	lazy var managedObjectContext: NSManagedObjectContext = {
 		// Grab the URL for the model.
 		guard let modelURL = NSBundle.mainBundle().URLForResource("VirtualTourist", withExtension: "momd") else {
-			// TODO: - Add proper error handling! Or get rid of guard clause.
 			fatalError("Model Data File not found")
 		}
 		
 		// Pass that URL into the NSManagedObjectModel.
 		guard let managedObjectModel = NSManagedObjectModel(contentsOfURL: modelURL) else {
-			// TODO: - Add proper error handling! Or get rid of guard clause.
 			fatalError("Error initializing managedObjectModel from: \(modelURL)")
 		}
 		
@@ -48,7 +46,6 @@ class CoreDataStackManager {
 		do {
 			var store: NSPersistentStore = try persistentStoreCoordinator.addPersistentStoreWithType(NSSQLiteStoreType, configuration: nil, URL: storeURL, options: nil)
 		} catch let error as NSError {
-			// TODO: - Add proper error handling!
 			fatalError("Failed to load store: \(error), \(error.userInfo)")
 		}
 		
@@ -63,13 +60,13 @@ class CoreDataStackManager {
 	
 	// MARK: - CoreData Saving support
 	
-	func saveContext() {
+	func saveContext() throws {
 		if !managedObjectContext.hasChanges { return }
 		
 		do {
 			try managedObjectContext.save()
 		} catch let error as NSError {
-			fatalError("Unresolved error \(error), \(error.userInfo)")
+			throw(error)
 		}
 	}
 }

@@ -26,9 +26,6 @@ extension PinDetailViewController: UICollectionViewDelegate, UICollectionViewDat
 		let photo = fetchedResultsController.objectAtIndexPath(indexPath) as! Photo
 		let cell = collectionView.dequeueReusableCellWithReuseIdentifier(cellIdentifier, forIndexPath: indexPath) as! PinDetailViewCell
 		
-		// check if cell is selected and set alpha appropriatelly. otherwise reused cells may appear as selected though actually not
-		cell.selected ? (cell.alpha = 0.5) : (cell.alpha = 1.0)
-		
 		// configure cell
 		configureCell(cell, photo: photo)
 		
@@ -60,25 +57,30 @@ extension PinDetailViewController: UICollectionViewDelegate, UICollectionViewDat
 		cell.layer.borderColor = UIColor.whiteColor().CGColor
 		cell.layer.borderWidth = 1
 		
+		// check if cell is selected and set alpha appropriatelly.
+		// otherwise reused cells may appear as selected though actually not
+		cell.selected ? (cell.alpha = 0.5) : (cell.alpha = 1.0)
 		// Set image to nil so reused cell won't appear with the same image
 		cell.cellImageView.image = nil
+		cell.activityIndicator.stopAnimating()
 		
-		// If image is cached, set it as cell image else download an image
-		if photo.image?.imageData != nil {
-			guard let imageData = photo.image?.imageData else {
-				return
-			}
+		// If image is in Core Data, set it as cell image else download an image
+		switch photo.image?.imageData {
+		case .Some:
+			guard let imageData = photo.image?.imageData else { break }
 			image = UIImage(data: imageData)
-		} else {
+			
+			cell.cellImageView.image = image
+			
+		case nil:
+			guard let imageURL = photo.imageURL as? String else { break }
+
 			cell.activityIndicator.startAnimating()
-				guard let
-					imageURL = photo.imageURL as? String,
-					identifier = photo.identifier as? String else {
-					return
-				}
+			
 			Queue.UserInitiated.execute {
 				let task = FlickrManager.sharedInstance.downloadImage(imageURL) { imageData, error in
 					guard let imageData = imageData as? NSData else {
+						self.showAlert(error!)
 						return
 					}
 					
@@ -87,18 +89,17 @@ extension PinDetailViewController: UICollectionViewDelegate, UICollectionViewDat
 					Queue.Main.execute {
 						cell.activityIndicator.stopAnimating()
 						cell.cellImageView.image = image
-						let imageBinary = ImageData(identifier: identifier, data: imageData, context: self.sharedContext)
-						imageBinary.photo = photo
+						
+						guard let _ = photo.id else { return }
+						
+						// Add imageBinary data to Core Data and assign properties
+						let imageBinary = ImageData(data: imageData, context: self.sharedContext)
 						photo.image = imageBinary
-						self.saveContext()
-						self.sharedContext.refreshAllObjects()
 					}
 				}
-				
-				cell.taskToCancelifCellIsReused = task
+				Queue.Main.execute { cell.taskToCancelifCellIsReused = task }
 			}
+			cell.cellImageView.image = image
 		}
-		
-		cell.cellImageView.image = image
 	}
 }

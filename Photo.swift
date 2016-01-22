@@ -13,22 +13,22 @@ import UIKit
 class Photo: NSManagedObject {
 	
 	struct Keys {
-		static let entityName = "Photo"
-		static let farm = "farm"
-		static let server = "server"
-		static let id = "id"
-		static let secret = "secret"
-		static let size = "q"
-		static let imageURL = "imageURL"
-
+		static let EntityName = "Photo"
+		static let Server = "server"
+		static let Farm = "farm"
+		static let Id = "id"
+		static let Size = "q"
+		static let Secret = "secret"
+		static let ImageURL = "imageURL"
+		static let CacheName = "photoCache"
 	}
 	
 	@NSManaged var farm: NSString?
 	@NSManaged var server: NSString?
 	@NSManaged var id: NSString?
 	@NSManaged var secret: NSString?
-	@NSManaged var identifier: NSString?
 	@NSManaged var imageURL: NSString?
+	
 	@NSManaged var location: Pin
 	@NSManaged var image: ImageData?
 
@@ -38,37 +38,22 @@ class Photo: NSManagedObject {
 	
 	init (dictionary: [String : NSString] , context: NSManagedObjectContext) {
 		guard let entity = NSEntityDescription.entityForName("Photo", inManagedObjectContext: context) else {
-			fatalError("Unable to load context")
+			fatalError("Unable to initialize Photo entity")
 		}
 		super.init(entity: entity, insertIntoManagedObjectContext: context)
 		
 		guard let
-			farm = dictionary[Keys.farm],
-			server = dictionary[Keys.server],
-			id = dictionary[Keys.id],
-			secret = dictionary[Keys.secret] else {
+			newFarm = dictionary[Keys.Farm],
+			newServer = dictionary[Keys.Server],
+			newId = dictionary[Keys.Id],
+			newSecret = dictionary[Keys.Secret] else {
 			return
 		}
 		
-		self.farm = farm
-		self.server = server
-		self.id = id
-		self.secret = secret
-		self.identifier = "\(id)_\(secret).jpg"
-		self.imageURL = "https://farm\(farm).staticflickr.com/\(server)/\(id)_\(secret)_\(Keys.size).jpg"
-		
+		farm = newFarm
+		server = newServer
+		id = newId
+		secret = newSecret
+		imageURL = "https://farm\(newFarm).staticflickr.com/\(newServer)/\(newId)_\(newSecret)_\(Keys.Size).jpg"
 	}
-	
-	
-	// Image property with { get set } to retrieve/save files from/to Image Cache
-	/*
-	var image: UIImage? {
-		get {
-			return FlickrManager.Caches.imageCache.imageWithIdentifier(identifier as String)
-		}
-		set {
-			FlickrManager.Caches.imageCache.storeImage(newValue, withIdentifier: identifier as String)
-		}
-	}
-	*/
 }

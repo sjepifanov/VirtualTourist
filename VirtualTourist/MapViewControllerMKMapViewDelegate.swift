@@ -55,16 +55,20 @@ extension MapViewController: MKMapViewDelegate {
 			let lat = annotation.coordinate.latitude as NSNumber
 			let lon = annotation.coordinate.longitude as NSNumber
 			
-			fetchPin(lat, longitude: lon)
+			guard let pin = fetchPin(lat, longitude: lon) else { break }
+			fetchedPin = pin
 			
 		case .Ending:
 			let lat = annotation.coordinate.latitude as NSNumber
 			let lon = annotation.coordinate.longitude as NSNumber
 			
+			// Remove photos from dragged pin
+			fetchedPin.photos = nil
+			
 			fetchedPin.setValue(lat, forKey: Keys.Latitude)
 			fetchedPin.setValue(lon, forKey: Keys.Longitude)
 
-			saveContext()
+			saveContextAndRefresh()
 			
 		default:
 			break

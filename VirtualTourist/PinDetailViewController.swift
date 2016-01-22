@@ -25,6 +25,7 @@ class PinDetailViewController: UIViewController {
 	@IBOutlet weak var collectionView: UICollectionView!
 	@IBOutlet weak var mapView: MKMapView!
 	@IBOutlet weak var removeRefreshButton: UIButton!
+	@IBOutlet weak var noPhotosLabel: UILabel!
 	
 	// MARK: - Initializing Views and Layout
 	
@@ -43,19 +44,17 @@ class PinDetailViewController: UIViewController {
 		
 		sharedContext.shouldDeleteInaccessibleFaults = true
 		
-		// Set button title and initial state
+		noPhotosLabel.hidden = true
 		removeRefreshButton.enabled = false
 		removeRefreshButton.setTitle("New Collection", forState: .Normal)
 		
 		fetchedResultsController.delegate = self
 		
+		
+		// Add observer on sharedContext did Save Notification
 		NSNotificationCenter.defaultCenter().addObserver(self, selector: "contextDidSaveContext:", name: NSManagedObjectContextDidSaveNotification, object: nil)
 		
-		self.fetchPhotos()
-		//if let photos = self.pin.photos {
-		//	self.fetchBinaryData(photos)
-		//}
-		
+		fetchPhotos()
 	}
 	
 	override func viewWillAppear(animated: Bool) {
@@ -86,22 +85,22 @@ class PinDetailViewController: UIViewController {
 	override func viewWillDisappear(animated: Bool) {
 		// Deselect selected cells when view disappears
 		collectionView.selectItemAtIndexPath(nil, animated: false, scrollPosition: .None)
+		
+		// Remove observer
 		NSNotificationCenter.defaultCenter().removeObserver(self)
-		saveContext()
 	}
 	
 	// MARK: - Actions
 	
 	@IBAction func removeRefreshButtonAction(sender: AnyObject) {
 		if let selectedItems  = collectionView.indexPathsForSelectedItems() where selectedItems.isEmpty {
+			// Cancell any running NSURLSession tasks
 			FlickrManager.sharedInstance.session.invalidateAndCancel()
 			
 			deleteAllPhotos()
 			getPhotosByLatLon()
 			
 		} else {
-			FlickrManager.sharedInstance.session.invalidateAndCancel()
-			
 			deleteSelectedPhotos()
 			collectionView.selectItemAtIndexPath(nil, animated: false, scrollPosition: .None)
 			removeRefreshButtonState()
@@ -116,41 +115,26 @@ class PinDetailViewController: UIViewController {
 	}()
 	
 	// Fetched Result Controller for "Photo" entity
+	// Set with cache
+	// Image binary data is saved in separate entity in Core Data
 	lazy var fetchedResultsController: NSFetchedResultsController = {
-		let fetchRequest = NSFetchRequest(entityName: Photo.Keys.entityName)
-		
-		fetchRequest.sortDescriptors = [NSSortDescriptor(key: Photo.Keys.id, ascending: true)]
-		
-		let fetchResultController = NSFetchedResultsController(
-			fetchRequest: fetchRequest,
-			managedObjectContext: self.sharedContext,
-			sectionNameKeyPath: nil,
-			cacheName: "rootCache"
-		)
-		
-		return fetchResultController
-	}()
-	
-	// Fetched Result Controller for "ImageBinary" entity with cache
-	/*
-	lazy var fetchedResultsControllerImageBinary: NSFetchedResultsController = {
-		let fetchRequest = NSFetchRequest(entityName: ImageData.Keys.Entity)
-		
-		fetchRequest.sortDescriptors = [NSSortDescriptor(key: ImageData.Keys.Identifier, ascending: true)]
+		let fetchRequest = NSFetchRequest(entityName: Photo.Keys.EntityName)
+		let sortDescriptor = NSSortDescriptor(key: Photo.Keys.Id, ascending: true)
+		fetchRequest.sortDescriptors = [sortDescriptor]
 		
 		let fetchResultController = NSFetchedResultsController(
 			fetchRequest: fetchRequest,
 			managedObjectContext: self.sharedContext,
 			sectionNameKeyPath: nil,
-			cacheName: ImageData.Keys.CacheName
+			cacheName: Photo.Keys.CacheName
 		)
 		
 		return fetchResultController
 	}()
-	*/
 	
 	// MARK: - Methods
 	
+	// Setup mapView region and annotation point
 	func configureMapView() {
 		guard let
 			lat = pin.valueForKey(Pin.Keys.Latitude) as? CLLocationDegrees,
@@ -170,102 +154,88 @@ class PinDetailViewController: UIViewController {
 		self.mapView.addAnnotation(annotation)
 	}
 	
+	// Get JSON data for Flickr search request by Latitude and Longitude
+	// Parse data to retrieve no more than 21 records
 	func getPhotosByLatLon() {
+		
+		removeRefreshButton.enabled = false
+		noPhotosLabel.hidden = true
+		noPhotosLabel.textColor = .whiteColor()
+		
 		guard let
 			lat = pin.valueForKey(Pin.Keys.Latitude) as? NSNumber,
 			lon = pin.valueForKey(Pin.Keys.Longitude) as? NSNumber else {
 				return
 		}
 		
-		removeRefreshButton.enabled = false
-		
 		FlickrManager.sharedInstance.getFlickrPhotoByLatLon(latitude: lat, longitude: lon) { data, error in
+			// Delay context save and interface update untill method is done
 			defer {
 				Queue.Main.execute {
-					self.saveContext()
-					self.sharedContext.refreshAllObjects()
+					self.saveContextAndRefresh()
+					self.removeRefreshButton.enabled = true
+					if let photos = self.pin.photos where photos.isEmpty {
+						self.noPhotosLabel.hidden = false
+						self.noPhotosLabel.textColor = .grayColor()
+					}
 				}
 			}
-			
 			guard let data = data as? [[String : AnyObject]] else {
+				self.showAlert(error!)
 				return
 			}
 			
+			// Parse JSON responce, prepare array of photo records.
 			let photosDictionary = FlickrManager.sharedInstance.parsePhotosDictionary(data)
-			
+			// Add photo objects from parsed array to Core Data
 			photosDictionary.forEach { (dictionary: [String : NSString]) -> () in
 				let photo = Photo(dictionary: dictionary, context: self.sharedContext)
 				photo.location = self.pin
 			}
 		}
 	}
-	
-	func deleteAllPhotos() {
-		guard let photos = fetchedResultsController.fetchedObjects as? [Photo] else {
-			return
-		}
-		
-		photos.forEach {
-			self.sharedContext.deleteObject($0)
-		}
-		saveContext()
-		sharedContext.refreshAllObjects()
-		
-	}
-	
-	func deleteSelectedPhotos() {
-		guard let selectedItems = collectionView.indexPathsForSelectedItems() else {
-			return
-		}
-		selectedItems.forEach { (indexPath:(NSIndexPath)) -> Void in
-			if let photo = self.fetchedResultsController.objectAtIndexPath(indexPath) as? Photo {
-				self.sharedContext.deleteObject(photo)
-			}
-		}
-		saveContext()
-		sharedContext.refreshAllObjects()
-		
-	}
-	
+
 	
 	// MARK: - Helpers
 	
 	// Fetch photos with predicate. Get photos for respective location
 	func fetchPhotos() {
-		NSFetchedResultsController.deleteCacheWithName("rootCache")
+		NSFetchedResultsController.deleteCacheWithName(Photo.Keys.CacheName)
 		do {
 			self.fetchedResultsController.fetchRequest.predicate = NSPredicate(format: "location = %@", self.pin)
 			try self.fetchedResultsController.performFetch()
 		} catch {
 			return
 		}
-		collectionView.reloadData()
+	}
+
+	func deleteAllPhotos() {
+		guard let _ = fetchedResultsController.fetchedObjects as? [Photo] else {
+			return
+		}
+		pin.photos = nil
 	}
 	
-	// Fetch image binary date for location photos
-	/*
-	func fetchBinaryData(photos: [Photo]) {
-		// Clear cache before making another fetch request
-		NSFetchedResultsController.deleteCacheWithName(ImageData.Keys.CacheName)
-		photos.forEach { (photo: (Photo)) -> Void in
-			do {
-				self.fetchedResultsControllerImageBinary.fetchRequest.predicate = NSPredicate(format: "photo = %@", photo)
-				try self.fetchedResultsControllerImageBinary.performFetch()
-			} catch {
-				return
+	func deleteSelectedPhotos() {
+		guard let selectedItems = collectionView.indexPathsForSelectedItems() else {
+			return
+		}
+		
+		for indexPath in selectedItems {
+			if let photo = self.fetchedResultsController.objectAtIndexPath(indexPath) as? Photo {
+				self.sharedContext.deleteObject(photo)
 			}
 		}
 	}
-	*/
-	func contextDidSaveContext (notification: NSNotification) {
-		print("!!!!!CONTEXT SAVED!!!!!!")
-		if !removeRefreshButton.enabled {
-			removeRefreshButton.enabled = true
-		}
-	}
 	
-	func saveContext() {
-		CoreDataStackManager.sharedInstance.saveContext()
+	func saveContextAndRefresh() {
+		do {
+			try CoreDataStackManager.sharedInstance.saveContext()
+		} catch let error as NSError {
+			self.showAlert(error.localizedDescription)
+		}
+		
+		sharedContext.refreshAllObjects()
 	}
 	
 	func removeRefreshButtonState() {
@@ -275,5 +245,9 @@ class PinDetailViewController: UIViewController {
 		} else {
 			self.removeRefreshButton.setTitle("Remove Selected Pictures", forState: .Normal)
 		}
+	}
+	
+	// MARK: - contextDidSaveContext Observer
+	func contextDidSaveContext (notification: NSNotification) {
 	}
 }

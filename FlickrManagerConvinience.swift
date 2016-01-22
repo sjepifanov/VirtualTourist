@@ -26,8 +26,7 @@ extension FlickrManager {
 			MethodArguments.Longitude : "\(longitude)",
 			MethodArguments.Accuracy : Keys.AccuracyRegion,
 			MethodArguments.ContentType : Keys.ContentType,
-			MethodArguments.Sort : Keys.SortBy,
-			MethodArguments.Page : Keys.NumberOfPages
+			MethodArguments.Sort : Keys.SortBy
 		]
 		
 		guard let request = prepareRequest(methodArguments) else {
@@ -58,43 +57,48 @@ extension FlickrManager {
 	*/
 	func parsePhotosDictionary(dictionary: [[String : AnyObject]]) -> [[String : NSString]] {
 		// Map elements replacing nil with empty Array
-		let dictionary = dictionary.map {(object: [String : AnyObject]) -> [String : NSString] in
+		let dictionary = dictionary
+			.map {(object: [String : AnyObject]) -> [String : NSString] in
 			guard let
-				id = object[Photo.Keys.id] as? NSString,
-				server = object[Photo.Keys.server] as? NSString,
-				secret = object[Photo.Keys.secret] as? NSString,
-				farm = object[Photo.Keys.farm] as? NSNumber else {
+				id = object[Photo.Keys.Id] as? NSString,
+				server = object[Photo.Keys.Server] as? NSString,
+				secret = object[Photo.Keys.Secret] as? NSString,
+				farm = object[Photo.Keys.Farm] as? NSNumber else {
 					return [:]
 			}
 			let dictionary = [
-				Photo.Keys.farm : "\(farm)",
-				Photo.Keys.server : server,
-				Photo.Keys.id : id,
-				Photo.Keys.secret : secret
+				Photo.Keys.Farm : "\(farm)",
+				Photo.Keys.Server : server,
+				Photo.Keys.Id : id,
+				Photo.Keys.Secret : secret
 			]
-			return dictionary }.filter { $0 != [:] } // Filter empty arrays
+			return dictionary }
+			.filter { $0 != [:] } // Filter empty arrays
 		
-		// In case all elements will be empty after map.filter, stop execution
+		// In case all elements will be empty after .map{}.filter{}, return empty array
 		if dictionary.isEmpty { return [] }
 		
 		var photosDictionary = [[String : NSString]]()
 		
-		// A bit of randomization in search results in case large number of photos returned
-		// Return 21 elements from Photos Dictionary to be displayed in Collection View
+		// A bit of randomization in search results in case of large number of photos are returned
+		// Return no more than 21 elements from Photos Dictionary to insert in Core Data MOC
 		switch dictionary.count {
-		case 0...150:
+		case 0...100:
 			dictionary
 				.prefix(21)
 				.forEach { photosDictionary.append($0) }
 			
 		default:
-			var i = 0
+			var indexSet = Set<Int>()
 			repeat {
 				let randomIndex = Int(arc4random_uniform(UInt32(dictionary.count)))
-				let dictionary = dictionary[randomIndex]
+				indexSet.insert(randomIndex)
+			} while  indexSet.count < 21
+			
+			for index in indexSet {
+				let dictionary = dictionary[index]
 				photosDictionary.append(dictionary)
-				i++
-			} while  i < 21
+			}
 		}
 		
 		return photosDictionary
