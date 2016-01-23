@@ -30,7 +30,6 @@ class Photo: NSManagedObject {
 	@NSManaged var imageURL: NSString?
 	
 	@NSManaged var location: Pin
-	@NSManaged var image: ImageData?
 
 	override init(entity: NSEntityDescription, insertIntoManagedObjectContext context: NSManagedObjectContext?) {
 		super.init(entity: entity, insertIntoManagedObjectContext: context)
@@ -55,5 +54,22 @@ class Photo: NSManagedObject {
 		id = newId
 		secret = newSecret
 		imageURL = "https://farm\(newFarm).staticflickr.com/\(newServer)/\(newId)_\(newSecret)_\(Keys.Size).jpg"
+	}
+	
+	private lazy var identifier: String = "\(self.id) + _ + \(self.secret) + .jpg"
+	
+	// Computed image property with { get set } to retrieve/save files from/to Image Cache
+	var image: UIImage? {
+		get {
+			return FlickrManager.Caches.imageCache.imageWithIdentifier(identifier as String)
+		}
+		set {
+			FlickrManager.Caches.imageCache.storeImage(newValue, withIdentifier: identifier as String)
+		}
+	}
+	
+	override func prepareForDeletion() {
+		// Delete photo image file from disk
+		image = nil
 	}
 }

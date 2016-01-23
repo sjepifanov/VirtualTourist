@@ -14,9 +14,7 @@ class PinDetailViewController: UIViewController {
 	
 	let cellIdentifier = "PinPhotoCollectionCell"
 	
-	lazy var pin: Pin = {
-		return Pin()
-	}()
+	lazy var pin: Pin = Pin()
 	
 	// initializing array of NSBlockOperation to control collectionView objects deletion/updates
 	// with PinDetailViewControllerFRCDelegate
@@ -31,41 +29,21 @@ class PinDetailViewController: UIViewController {
 	
 	override func viewDidLoad() {
 		super.viewDidLoad()
-		// collectionView Delegate and Data Source delegates are set in storyboard to PinDetailViewController
-		
-		// enable multiple cells selection
-		collectionView.allowsMultipleSelection = true
-		
-		// Switch off automatic inset on top of collectionView
-		automaticallyAdjustsScrollViewInsets = false
-		
-		// Render Map region in Pin Detail View
-		configureMapView()
-		
+		configureView()
 		sharedContext.shouldDeleteInaccessibleFaults = true
-		
-		noPhotosLabel.hidden = true
-		removeRefreshButton.enabled = false
-		removeRefreshButton.setTitle("New Collection", forState: .Normal)
-		
 		fetchedResultsController.delegate = self
-		
 		
 		// Add observer on sharedContext did Save Notification
 		NSNotificationCenter.defaultCenter().addObserver(self, selector: "contextDidSaveContext:", name: NSManagedObjectContextDidSaveNotification, object: nil)
-		
-		FlickrManager.sharedInstance.session.invalidateAndCancel()
+
 		fetchPhotos()
 	}
 	
-	override func viewWillAppear(animated: Bool) {
-		super.viewWillAppear(animated)
-		// If there is no fetched photos request a new batch from Flickr
-		if let photos = pin.photos where photos.isEmpty {
-			self.getPhotosByLatLon()
-		} else {
-			removeRefreshButton.enabled = true
-		}
+	override func viewDidAppear(animated: Bool) {
+		super.viewDidAppear(animated)
+		collectionView.reloadData()
+		collectionView.layoutIfNeeded()
+		removeRefreshButton.enabled = true
 	}
 	
 	override func viewDidLayoutSubviews() {
@@ -95,46 +73,85 @@ class PinDetailViewController: UIViewController {
 	
 	@IBAction func removeRefreshButtonAction(sender: AnyObject) {
 		if let selectedItems  = collectionView.indexPathsForSelectedItems() where selectedItems.isEmpty {
-			// Cancell any running NSURLSession tasks
 			FlickrManager.sharedInstance.session.invalidateAndCancel()
-			
 			deleteAllPhotos()
 			getPhotosByLatLon()
-			
 		} else {
 			deleteSelectedPhotos()
 			collectionView.selectItemAtIndexPath(nil, animated: false, scrollPosition: .None)
-			removeRefreshButtonState()
+			saveContextAndRefresh()
+			setButtonTitle()
 		}
 	}
 	
-	
-	// MARK: - Core Data convenience properties
-	
-	lazy var sharedContext: NSManagedObjectContext =  {
-		return CoreDataStackManager.sharedInstance.managedObjectContext
-	}()
-	
-	// Fetched Result Controller for "Photo" entity
-	// Set with cache
-	// Image binary data is saved in separate entity in Core Data
-	lazy var fetchedResultsController: NSFetchedResultsController = {
-		let fetchRequest = NSFetchRequest(entityName: Photo.Keys.EntityName)
-		let sortDescriptor = NSSortDescriptor(key: Photo.Keys.Id, ascending: true)
-		fetchRequest.sortDescriptors = [sortDescriptor]
-		
-		let fetchResultController = NSFetchedResultsController(
-			fetchRequest: fetchRequest,
-			managedObjectContext: self.sharedContext,
-			sectionNameKeyPath: nil,
-			cacheName: Photo.Keys.CacheName
-		)
-		
-		return fetchResultController
-	}()
-	
 	// MARK: - Methods
 	
+
+	// Get JSON data for Flickr search request by Latitude and Longitude
+	// Parse data to retrieve no more than 21 records
+	func getPhotosByLatLon() {
+		
+		removeRefreshButton.enabled = false
+		noPhotosLabel.hidden = true
+		noPhotosLabel.textColor = .whiteColor()
+		
+		guard let
+			lat = pin.valueForKey(Pin.Keys.Latitude) as? NSNumber,
+			lon = pin.valueForKey(Pin.Keys.Longitude) as? NSNumber else {
+				return
+		}
+		
+		FlickrManager.sharedInstance.getFlickrPhotoByLatLon(latitude: lat, longitude: lon) { data, error in
+			// Delay context save and interface update untill method is done
+			guard let data = data as? [[String : AnyObject]] else {
+				self.showAlert(error!)
+				return
+			}
+			
+			// Parse JSON responce, prepare array of photo records.
+			let photosDictionary = FlickrManager.sharedInstance.parsePhotosDictionary(data)
+			
+			// Add photo objects from parsed array to Core Data
+			defer {
+				Queue.Main.execute {
+					for dictionary in photosDictionary {
+						let photo = Photo(dictionary: dictionary, context: self.sharedContext)
+						photo.location = self.pin
+					}
+					self.saveContextAndRefresh()
+					self.collectionView.reloadData()
+					self.collectionView.layoutIfNeeded()
+					self.removeRefreshButton.enabled = true
+					if let photos = self.pin.photos where photos.isEmpty {
+						self.noPhotosLabel.hidden = false
+						self.noPhotosLabel.textColor = .grayColor()
+					}
+				}
+			}
+		}
+	}
+	
+	// MARK: - Configure Views
+	
+	func configureView() {
+		// collectionView Delegate and Data Source delegates are set in storyboard to PinDetailViewController
+		
+		// enable multiple cells selection
+		collectionView.allowsMultipleSelection = true
+		
+		// Switch off automatic inset on top of collectionView
+		automaticallyAdjustsScrollViewInsets = false
+		
+		// Render Map region in Pin Detail View
+		configureMapView()
+		
+		noPhotosLabel.hidden = true
+		noPhotosLabel.textColor = .whiteColor()
+		
+		removeRefreshButton.enabled = false
+		removeRefreshButton.setTitle("New Collection", forState: .Normal)
+	}
+
 	// Setup mapView region and annotation point
 	func configureMapView() {
 		guard let
@@ -155,47 +172,25 @@ class PinDetailViewController: UIViewController {
 		self.mapView.addAnnotation(annotation)
 	}
 	
-	// Get JSON data for Flickr search request by Latitude and Longitude
-	// Parse data to retrieve no more than 21 records
-	func getPhotosByLatLon() {
+	
+	// MARK: - Core Data convenience properties
+	lazy var sharedContext: NSManagedObjectContext = CoreDataStackManager.sharedInstance.managedObjectContext
+	
+	// Fetched Result Controller for "Photo" entity.
+	lazy var fetchedResultsController: NSFetchedResultsController = {
+		let fetchRequest = NSFetchRequest(entityName: Photo.Keys.EntityName)
+		let sortDescriptor = NSSortDescriptor(key: Photo.Keys.Id, ascending: true)
+		fetchRequest.sortDescriptors = [sortDescriptor]
 		
-		removeRefreshButton.enabled = false
-		noPhotosLabel.hidden = true
-		noPhotosLabel.textColor = .whiteColor()
+		let fetchResultController = NSFetchedResultsController(
+			fetchRequest: fetchRequest,
+			managedObjectContext: self.sharedContext,
+			sectionNameKeyPath: nil,
+			cacheName: Photo.Keys.CacheName
+		)
 		
-		guard let
-			lat = pin.valueForKey(Pin.Keys.Latitude) as? NSNumber,
-			lon = pin.valueForKey(Pin.Keys.Longitude) as? NSNumber else {
-				return
-		}
-		
-		FlickrManager.sharedInstance.getFlickrPhotoByLatLon(latitude: lat, longitude: lon) { data, error in
-			// Delay context save and interface update untill method is done
-			defer {
-				Queue.Main.execute {
-					self.saveContextAndRefresh()
-					self.removeRefreshButton.enabled = true
-					if let photos = self.pin.photos where photos.isEmpty {
-						self.noPhotosLabel.hidden = false
-						self.noPhotosLabel.textColor = .grayColor()
-					}
-				}
-			}
-			guard let data = data as? [[String : AnyObject]] else {
-				self.showAlert(error!)
-				return
-			}
-			
-			// Parse JSON responce, prepare array of photo records.
-			let photosDictionary = FlickrManager.sharedInstance.parsePhotosDictionary(data)
-			// Add photo objects from parsed array to Core Data
-			photosDictionary.forEach { (dictionary: [String : NSString]) -> () in
-				let photo = Photo(dictionary: dictionary, context: self.sharedContext)
-				photo.location = self.pin
-			}
-		}
-	}
-
+		return fetchResultController
+	}()
 	
 	// MARK: - Helpers
 	
@@ -211,10 +206,12 @@ class PinDetailViewController: UIViewController {
 	}
 
 	func deleteAllPhotos() {
-		guard let _ = fetchedResultsController.fetchedObjects as? [Photo] else {
+		guard let photos  = fetchedResultsController.fetchedObjects as? [Photo] else {
 			return
 		}
-		pin.photos = nil
+		for photo in photos{
+			sharedContext.deleteObject(photo)
+		}
 	}
 	
 	func deleteSelectedPhotos() {
@@ -239,7 +236,7 @@ class PinDetailViewController: UIViewController {
 		sharedContext.refreshAllObjects()
 	}
 	
-	func removeRefreshButtonState() {
+	func setButtonTitle() {
 		// Change button title depending on cells selection
 		if let selectedItems = collectionView.indexPathsForSelectedItems() where selectedItems.isEmpty {
 			self.removeRefreshButton.setTitle("New Collection", forState: .Normal)

@@ -13,6 +13,10 @@ class FlickrManager {
 	
 	typealias CompletionClosure = (AnyObject?, String?) -> Void
 	
+	struct Caches {
+		static let imageCache = ImageCache()
+	}
+	
 	// Initialize FlickrManager shared instance
 	static let sharedInstance = FlickrManager()
 	
@@ -32,8 +36,8 @@ class FlickrManager {
 	Send HTTP request to Flickr API
 	
 	- parameters:
-	- request: NSMutableURLRequest
-	- handler: (AnyObject?, String?)
+		- request: NSMutableURLRequest
+		- handler: (AnyObject?, String?)
 	*/
 	func sendRequest(request: NSMutableURLRequest, handler: CompletionClosure) {
 		let urlSession = NSURLSession(configuration: sessionConfiguration, delegate: nil, delegateQueue: nil)
@@ -61,8 +65,8 @@ class FlickrManager {
 	Download Image from Flickr
 	
 	- parameters:
-	- url: String
-	- handler: (AnyObject?, String?)
+		- url: String
+		- handler: (AnyObject?, String?)
 	*/
 	func downloadImage(url: String, handler: CompletionClosure) -> NSURLSessionTask? {
 		guard let url = NSURL(string: url) else {
@@ -70,8 +74,7 @@ class FlickrManager {
 		}
 		
 		let urlSession = NSURLSession(configuration: sessionConfiguration, delegate: nil, delegateQueue: nil)
-		let request = NSMutableURLRequest(URL: url)
-		let sessionTask = urlSession.dataTaskWithRequest(request) { (data, response, error) in
+		let sessionTask = urlSession.dataTaskWithURL(url) { (data, response, error) in
 			guard let data = data else {
 				if let error = error {
 					return handler(nil, error.localizedDescription)
@@ -124,8 +127,7 @@ class FlickrManager {
 	
 	- parameters:
 		- dictionary: [String : AnyObject]
-		- returns:
-		String
+		- returns: String
 	*/
 	private func dictionaryToQueryString(dictionary: [String : AnyObject]) -> String {
 		let queryItems = dictionary.map { NSURLQueryItem(name: $0, value: $1 as? String) }

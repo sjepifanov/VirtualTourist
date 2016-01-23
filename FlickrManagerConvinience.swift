@@ -57,8 +57,7 @@ extension FlickrManager {
 	*/
 	func parsePhotosDictionary(dictionary: [[String : AnyObject]]) -> [[String : NSString]] {
 		// Map elements replacing nil with empty Array
-		let dictionary = dictionary
-			.map {(object: [String : AnyObject]) -> [String : NSString] in
+		let parsedDictionary = dictionary.map {(object: [String : AnyObject]) -> [String : NSString] in
 			guard let
 				id = object[Photo.Keys.Id] as? NSString,
 				server = object[Photo.Keys.Server] as? NSString,
@@ -66,41 +65,31 @@ extension FlickrManager {
 				farm = object[Photo.Keys.Farm] as? NSNumber else {
 					return [:]
 			}
-			let dictionary = [
-				Photo.Keys.Farm : "\(farm)",
+			let photo = [
+				Photo.Keys.Farm : "\(farm)" as NSString,
 				Photo.Keys.Server : server,
 				Photo.Keys.Id : id,
 				Photo.Keys.Secret : secret
 			]
-			return dictionary }
-			.filter { $0 != [:] } // Filter empty arrays
+			return photo }.filter { $0 != [:] } // Filter empty arrays
 		
-		// In case all elements will be empty after .map{}.filter{}, return empty array
-		if dictionary.isEmpty { return [] }
+		// In case array is empty after .map{}.filter{}, return empty array
+		if parsedDictionary.isEmpty { return [] }
 		
-		var photosDictionary = [[String : NSString]]()
+		switch parsedDictionary.count {
+		case 0...105:
+			// Return up to 21 elements of parsedDictionary
+			return parsedDictionary.prefix(21).map { $0 }
 		
-		// A bit of randomization in search results in case of large number of photos are returned
-		// Return no more than 21 elements from Photos Dictionary to insert in Core Data MOC
-		switch dictionary.count {
-		case 0...100:
-			dictionary
-				.prefix(21)
-				.forEach { photosDictionary.append($0) }
-			
 		default:
 			var indexSet = Set<Int>()
+			// A bit of randomization in search results
 			repeat {
 				let randomIndex = Int(arc4random_uniform(UInt32(dictionary.count)))
 				indexSet.insert(randomIndex)
 			} while  indexSet.count < 21
-			
-			for index in indexSet {
-				let dictionary = dictionary[index]
-				photosDictionary.append(dictionary)
-			}
+			// Return 21 unique random elements of parsedDictionary
+			return indexSet.map { parsedDictionary[$0] }
 		}
-		
-		return photosDictionary
 	}
 }

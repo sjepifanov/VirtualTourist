@@ -56,22 +56,33 @@ extension MapViewController: MKMapViewDelegate {
 			let lon = annotation.coordinate.longitude as NSNumber
 			
 			guard let pin = fetchPin(lat, longitude: lon) else { break }
-			fetchedPin = pin
+			managedPin = pin
+			fetchPhotos()
 			
 		case .Ending:
 			let lat = annotation.coordinate.latitude as NSNumber
 			let lon = annotation.coordinate.longitude as NSNumber
-			
-			// Remove photos from dragged pin
-			fetchedPin.photos = nil
-			
-			fetchedPin.setValue(lat, forKey: Keys.Latitude)
-			fetchedPin.setValue(lon, forKey: Keys.Longitude)
 
-			saveContextAndRefresh()
+			// Delete Current Photos and Image files for Pin.
+			deletePinPhotos()
 			
+			managedPin.setValue(lat, forKey: Keys.Latitude)
+			managedPin.setValue(lon, forKey: Keys.Longitude)
+			
+			getFlickrPhotosForPin(managedPin)
+			
+			saveContextAndRefresh()
+
 		default:
 			break
 		}
+	}
+	
+	func mapView(mapView: MKMapView, didSelectAnnotationView view: MKAnnotationView) {
+		view.highlighted = true
+	}
+	
+	func mapView(mapView: MKMapView, didDeselectAnnotationView view: MKAnnotationView) {
+		view.highlighted = false
 	}
 }

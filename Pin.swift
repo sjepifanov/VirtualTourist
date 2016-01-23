@@ -25,7 +25,7 @@ class Pin: NSManagedObject {
 	
 	// Initilalize private var innerCoordinates.
 	// We will use it in Pin class extension for conformance with MKAnnotation protocol
-	private var innerCoordinate = CLLocationCoordinate2D(latitude: 0,longitude: 0)
+	private var innerCoordinate = CLLocationCoordinate2D(latitude: 0, longitude: 0)
 	
 	override init(entity: NSEntityDescription, insertIntoManagedObjectContext context: NSManagedObjectContext?) {
 		super.init(entity: entity, insertIntoManagedObjectContext: context)
@@ -44,8 +44,6 @@ class Pin: NSManagedObject {
 		
 		latitude = lat
 		longitude = lon
-		
-		innerCoordinate = CLLocationCoordinate2D(latitude: latitude as CLLocationDegrees, longitude: longitude as CLLocationDegrees )
 	}
 }
 

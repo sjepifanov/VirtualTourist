@@ -14,6 +14,12 @@ class PinDetailViewCell: UICollectionViewCell {
 	@IBOutlet weak var activityIndicator: UIActivityIndicatorView!
 	@IBOutlet weak var cellImageView: UIImageView!
 	
+	override func prepareForReuse() {
+		// Set image to nil so reused cell won't appear with the same image
+		cellImageView.image = nil
+		activityIndicator.stopAnimating()
+	}
+	
 	// Cancel initiated download task when cell is reused
 	var taskToCancelifCellIsReused: NSURLSessionTask? {
 		didSet {

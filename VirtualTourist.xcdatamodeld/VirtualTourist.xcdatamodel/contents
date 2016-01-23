@@ -1,16 +1,11 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <model userDefinedModelVersionIdentifier="" type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="9525" systemVersion="15C50" minimumToolsVersion="Xcode 7.0">
-    <entity name="ImageBinary" representedClassName=".ImageData" parentEntity="Photo" syncable="YES">
-        <attribute name="imageData" optional="YES" attributeType="Binary" allowsExternalBinaryDataStorage="YES" syncable="YES"/>
-        <relationship name="photo" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Photo" inverseName="image" inverseEntity="Photo" syncable="YES"/>
-    </entity>
-    <entity name="Photo" representedClassName=".Photo" syncable="YES">
+    <entity name="Photo" representedClassName=".Photo" parentEntity="Pin" syncable="YES">
         <attribute name="farm" optional="YES" attributeType="String" syncable="YES"/>
         <attribute name="id" optional="YES" attributeType="String" syncable="YES"/>
         <attribute name="imageURL" optional="YES" attributeType="String" syncable="YES"/>
         <attribute name="secret" optional="YES" attributeType="String" syncable="YES"/>
         <attribute name="server" optional="YES" attributeType="String" syncable="YES"/>
-        <relationship name="image" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="ImageBinary" inverseName="photo" inverseEntity="ImageBinary" syncable="YES"/>
         <relationship name="location" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Pin" inverseName="photos" inverseEntity="Pin" syncable="YES"/>
         <compoundIndexes>
             <compoundIndex>
@@ -29,8 +24,7 @@
         </compoundIndexes>
     </entity>
     <elements>
-        <element name="ImageBinary" positionX="9" positionY="-216" width="128" height="73"/>
-        <element name="Photo" positionX="223" positionY="-108" width="128" height="148"/>
-        <element name="Pin" positionX="-63" positionY="-52" width="128" height="88"/>
+        <element name="Photo" positionX="214" positionY="-112" width="128" height="133"/>
+        <element name="Pin" positionX="-20" positionY="-52" width="128" height="88"/>
     </elements>
 </model>

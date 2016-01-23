@@ -24,9 +24,7 @@ extension UIViewController {
 class MapViewController: UIViewController {
 	
 	// Pin object property
-	lazy var fetchedPin: Pin = {
-		return Pin()
-	}()
+	lazy var managedPin: Pin = Pin()
 	
 	struct Keys {
 		static let Latitude = "latitude"
@@ -43,45 +41,21 @@ class MapViewController: UIViewController {
 	override func viewDidLoad() {
 		super.viewDidLoad()
 		
-		let connection = FlickrManager.sharedInstance.networkConnectionType(FlickrManager.Keys.HTTPS)
-		switch connection {
-		case .NONETWORK:
-			showAlert("No Internet connection. The functionality of the app will be limited to saved locations")
-		case .MOBILE3GNETWORK:
-			showAlert("The app will download data from web services. Please switch to WiFi network if possible")
-		default:
-			break
-		}
+		// Check Network connection and warn the user.
+		checkConnection()
 		
-		// Adding editButtonItem() to change editing state.
-		// Even though MapView does not have "editing" state the implemantation is cleaner than custom solutions.
-		navigationItem.rightBarButtonItem = editButtonItem()
-		navigationItem.backBarButtonItem = UIBarButtonItem(title: "OK", style: .Plain, target: nil, action: nil)
-		navigationItem.title = "Virtual Tourist"
-		
-		// Set initial editing mode
-		setEditing(false, animated: false)
-		
-		// Set touch and hold duration
-		longPressRecognizer.minimumPressDuration = 0.7
-		tapRecognizer.numberOfTapsRequired = 1
-		
-		mapView.delegate = self
-		
-		// Restore last saved map region using NSKeyedArchiver/Unarchiever
-		restoreMapRegion(false)
+		configureView()
+
 		// Perform fetch of CoreData objects
-		if fetchPins() {
-			mapView.addAnnotations(getAnnotationsFromFetchedResuls())
-		}
+		fetchPins()
+		mapView.addAnnotations(getAnnotationsFromFetchedResuls())
 	}
 	
 	// MARK: - Actions
 	
 	@IBAction func handleLongPress(gestureRecognizer: UILongPressGestureRecognizer) {
-		// Do not allow to place pins while in edit mode or in wrong gestureRecognizer state.
+		// Do not allow to place pins while in edit mode.
 		if editing { return }
-		if gestureRecognizer.state != .Began { return }
 		
 		let touchPoint = gestureRecognizer.locationInView(mapView)
 		let touchMapCoordinate = mapView.convertPoint(touchPoint, toCoordinateFromView: mapView)
@@ -92,31 +66,24 @@ class MapViewController: UIViewController {
 			Keys.Longitude: touchMapCoordinate.longitude as NSNumber
 		]
 		
-		// Pin is conformed to MKAnnotation protocol hence setting it as annotation point
-		let annotation = Pin(dictionary: dictionary, context: sharedContext)
+		// Drop and drag Pin until finger is lifted.
+		switch gestureRecognizer.state {
+		case .Began:
+			managedPin = Pin(dictionary: dictionary, context: sharedContext)
+			managedPin.setCoordinate(touchMapCoordinate)
+			mapView.addAnnotation(managedPin)
+			
+		case .Changed:
+			managedPin.setCoordinate(touchMapCoordinate)
 		
-		mapView.addAnnotation(annotation)
-		
-		// Prefetch photos for location. Task may interfere with Pin Detail View if Pin is placed and tapped in quick succession.
-		
-		FlickrManager.sharedInstance.getFlickrPhotoByLatLon(
-			latitude: touchMapCoordinate.latitude as NSNumber,
-			longitude: touchMapCoordinate.longitude as NSNumber) { data, error in
-				guard let data = data as? [[String : AnyObject]] else {
-					self.showAlert(error!)
-					return
-				}
-				
-				defer {
-					Queue.Main.execute { self.saveContextAndRefresh() }
-				}
-				
-				let photosDictionary = FlickrManager.sharedInstance.parsePhotosDictionary(data)
-				
-				for dictionary in photosDictionary {
-					let photo = Photo(dictionary: dictionary, context: self.sharedContext)
-					photo.location = annotation
-				}
+		case .Ended:
+			managedPin.setValue(touchMapCoordinate.latitude as NSNumber, forKey: Keys.Latitude)
+			managedPin.setValue(touchMapCoordinate.longitude as NSNumber, forKey: Keys.Longitude)
+			// Prefetch photos for pin
+			getFlickrPhotosForPin(managedPin)
+			
+		default:
+			break
 		}
 	}
 	
@@ -141,46 +108,37 @@ class MapViewController: UIViewController {
 			return
 		}
 		
-		fetchedPin = pin
+		managedPin = pin
 		
 		switch editing {
 		case true:
+			// Delete Pin and Remove Annotation from the mapView
 			deletePin()
 			mapView.removeAnnotation(annotation)
 			saveContextAndRefresh()
+			
 		case false:
 			// If not in editing mode open Pin Detail View controller
 			guard let
 				controller = storyboard?.instantiateViewControllerWithIdentifier("PinDetailViewController") as? PinDetailViewController else {
 					break
 			}
-			controller.pin = fetchedPin
+			controller.pin = managedPin
 			showViewController(controller, sender: self)
 		}
 	}
 	
 	// MARK: - NSKeyedArchiver and CoreData convinience properties
 	
-	// FilePath property for mapRegionArchieve file
-	var filePath: String? {
-		let manager = NSFileManager.defaultManager()
-		guard let url = manager.URLsForDirectory(.DocumentDirectory, inDomains: .UserDomainMask).first as NSURL? else {
-			return nil
-		}
-		return url.URLByAppendingPathComponent("mapRegionArchieve").path
-	}
-	
 	// Managed Object Context property
-	lazy var sharedContext: NSManagedObjectContext  = {
-		return CoreDataStackManager.sharedInstance.managedObjectContext
-	}()
+	lazy var sharedContext: NSManagedObjectContext = CoreDataStackManager.sharedInstance.managedObjectContext
 	
 	// Fetched Results Controller property
 	lazy var fetchedResultsController: NSFetchedResultsController = {
 		// Create the fetch request
 		let fetchRequest = NSFetchRequest(entityName: "Pin")
-		let sortDescriptor = NSSortDescriptor(key: Keys.Latitude, ascending: true)
 		// Add a sort descriptor.
+		let sortDescriptor = NSSortDescriptor(key: Keys.Latitude, ascending: true)
 		fetchRequest.sortDescriptors = [sortDescriptor]
 		
 		// Create the Fetched Results Controller
@@ -193,7 +151,55 @@ class MapViewController: UIViewController {
 	}()
 	
 	
+	lazy var fetchedResultsControllerPhoto: NSFetchedResultsController = {
+		// Create the fetch request
+		let fetchRequest = NSFetchRequest(entityName: "Photo")
+		// Add a sort descriptor.
+		let sortDescriptor = NSSortDescriptor(key: Keys.Latitude, ascending: true)
+		fetchRequest.sortDescriptors = [sortDescriptor]
+		
+		// Create the Fetched Results Controller
+		let fetchedResultsController = NSFetchedResultsController(fetchRequest: fetchRequest,
+			managedObjectContext: self.sharedContext,
+			sectionNameKeyPath: nil,
+			cacheName: nil)
+		
+		return fetchedResultsController
+	}()
+	
+	// FilePath property for mapRegionArchieve file
+	lazy var filePath: String? = {
+		let manager = NSFileManager.defaultManager()
+		guard let url = manager.URLsForDirectory(.DocumentDirectory, inDomains: .UserDomainMask).first as NSURL? else {
+			return nil
+		}
+		return url.URLByAppendingPathComponent("mapRegionArchieve").path
+	}()
+	
+	
 	// MARK: - Helpers
+	
+	// Prefetch photos for location.
+	func getFlickrPhotosForPin(pin: Pin) {
+		FlickrManager.sharedInstance.getFlickrPhotoByLatLon(latitude: pin.latitude, longitude: pin.longitude) { data, error in
+			guard let data = data as? [[String : AnyObject]] else {
+				self.showAlert(error!)
+				return
+			}
+			
+			let photosDictionary = FlickrManager.sharedInstance.parsePhotosDictionary(data)
+			
+			defer {
+				Queue.Main.execute {
+					for dictionary in photosDictionary {
+						let photo = Photo(dictionary: dictionary, context: self.sharedContext)
+						photo.location = pin
+					}
+					self.saveContextAndRefresh()
+				}
+			}
+		}
+	}
 	
 	// Switch editing state and show tapPinstoDelete label
 	override func setEditing(editing: Bool, animated: Bool) {
@@ -308,12 +314,27 @@ class MapViewController: UIViewController {
 	/**
 	Delete Pin object:
 	
-	- Delete Pin Photos object
-	- Corresponding image binary data should be deleted automatically
-	- Delete Pin from Core Data
+	- Delete Pin Object
+	- Corresponding Photo image files should be deleted automatically via prepareForDelete
 	*/
 	func deletePin() {
-		self.sharedContext.deleteObject(fetchedPin)
+		self.sharedContext.deleteObject(managedPin)
+	}
+	
+	func fetchPhotos() {
+		do {
+			self.fetchedResultsControllerPhoto.fetchRequest.predicate = NSPredicate(format: "location = %@", self.managedPin)
+			try self.fetchedResultsControllerPhoto.performFetch()
+		} catch {
+			return
+		}
+	}
+	
+	func deletePinPhotos() {
+		guard let photos  = fetchedResultsControllerPhoto.fetchedObjects as? [Photo] else {
+			return
+		}
+		photos.forEach { self.sharedContext.deleteObject($0) }
 	}
 	
 	// Create Annotations Array
@@ -343,5 +364,38 @@ class MapViewController: UIViewController {
 		}
 		
 		return annotations
+	}
+	
+	func checkConnection() {
+		let connection = FlickrManager.sharedInstance.networkConnectionType(FlickrManager.Keys.HTTPS)
+		switch connection {
+		case .NONETWORK:
+			showAlert("No Internet connection. The functionality of the app will be limited to saved locations")
+		case .MOBILE3GNETWORK:
+			showAlert("The app will download data from web services. Please switch to WiFi network if possible")
+		default:
+			break
+		}
+	}
+	
+	// Moved from ViewDidLoad section
+	func configureView() {
+		// Adding editButtonItem() to change editing state.
+		// Even though MapView does not have "editing" state the implemantation is cleaner than custom solutions.
+		navigationItem.rightBarButtonItem = editButtonItem()
+		navigationItem.backBarButtonItem = UIBarButtonItem(title: "OK", style: .Plain, target: nil, action: nil)
+		navigationItem.title = "Virtual Tourist"
+		
+		// Set initial editing mode
+		setEditing(false, animated: false)
+		
+		// Set touch and hold duration
+		longPressRecognizer.minimumPressDuration = 0.7
+		tapRecognizer.numberOfTapsRequired = 1
+		
+		mapView.delegate = self
+		
+		// Restore last saved map region using NSKeyedArchiver/Unarchiever
+		restoreMapRegion(false)
 	}
 }
