@@ -15,6 +15,7 @@ class PinDetailViewCell: UICollectionViewCell {
 	@IBOutlet weak var cellImageView: UIImageView!
 	
 	override func prepareForReuse() {
+		super.prepareForReuse()
 		// Set image to nil so reused cell won't appear with the same image
 		cellImageView.image = nil
 		activityIndicator.stopAnimating()

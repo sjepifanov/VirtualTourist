@@ -82,7 +82,6 @@ extension PinDetailViewController: UICollectionViewDelegate, UICollectionViewDat
 						cell.activityIndicator.stopAnimating()
 						cell.cellImageView.image = image
 						
-						guard let _ = photo.id else { return }
 						photo.image = image
 					}
 				}
