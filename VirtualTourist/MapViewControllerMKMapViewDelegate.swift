@@ -12,7 +12,7 @@ import MapKit
 // MARK: - MapViewController extension for MKMapViewDelegate
 extension MapViewController: MKMapViewDelegate {
 	
-	// MARK: - Delegates
+	// MARK: - Pin Map View Delegate
 	func mapView(mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
 		saveMapRegion()
 	}
@@ -31,6 +31,7 @@ extension MapViewController: MKMapViewDelegate {
 			guard let pin = pinView else {
 				return nil
 			}
+			
 			pin.pinTintColor = .redColor()
 			pin.animatesDrop = true
 			pin.canShowCallout = false
@@ -58,12 +59,14 @@ extension MapViewController: MKMapViewDelegate {
 			guard let pin = fetchPin(lat, longitude: lon) else { break }
 			managedPin = pin
 			
-		case .Ending:
+		case .Ending, .Canceling:
 			let lat = annotation.coordinate.latitude as NSNumber
 			let lon = annotation.coordinate.longitude as NSNumber
 
 			// Delete Current Photos and Image files for Pin. Update Pin.
 			deleteCachedImageFilesAndPhoto()
+			
+			managedPin.setCoordinate(annotation.coordinate)
 			
 			managedPin.setValue(lat, forKey: Keys.Latitude)
 			managedPin.setValue(lon, forKey: Keys.Longitude)
@@ -76,7 +79,7 @@ extension MapViewController: MKMapViewDelegate {
 			break
 		}
 	}
-	/*
+
 	func mapView(mapView: MKMapView, didSelectAnnotationView view: MKAnnotationView) {
 		view.highlighted = true
 	}
@@ -84,5 +87,5 @@ extension MapViewController: MKMapViewDelegate {
 	func mapView(mapView: MKMapView, didDeselectAnnotationView view: MKAnnotationView) {
 		view.highlighted = false
 	}
-	*/
+
 }

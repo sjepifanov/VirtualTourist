@@ -10,6 +10,8 @@
 
 import CoreData
 
+//MARK: - Fetched Results Controller Delegate for Photo Collecton View
+
 extension PinDetailViewController: NSFetchedResultsControllerDelegate {
 	// Add collectionView operations to Operation Block. Execute when all actions are done, from controllerDidChangeContent
 	private func addBlockOperations(processingBlock: () -> Void) {
@@ -51,8 +53,7 @@ extension PinDetailViewController: NSFetchedResultsControllerDelegate {
 		}
 	}
 	
-	func controllerDidChangeContent(controller: NSFetchedResultsController) {
-		collectionView.performBatchUpdates({ () -> Void in
+	func controllerDidChangeContent(controller: NSFetchedResultsController) { collectionView.performBatchUpdates({ () -> Void in
 			// Execute all operations added to blockOperations array
 			self.blockOperations.forEach { $0.start() }
 			}, completion: { (finished) -> Void in

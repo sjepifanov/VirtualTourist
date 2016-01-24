@@ -30,6 +30,7 @@ class PinDetailViewController: UIViewController {
 	override func viewDidLoad() {
 		super.viewDidLoad()
 		configureView()
+		
 		sharedContext.shouldDeleteInaccessibleFaults = true
 		fetchedResultsController.delegate = self
 		
@@ -41,7 +42,7 @@ class PinDetailViewController: UIViewController {
 	
 	override func viewDidAppear(animated: Bool) {
 		super.viewDidAppear(animated)
-		collectionView.reloadData()
+		
 		collectionView.layoutIfNeeded()
 		removeRefreshButton.enabled = true
 	}
@@ -78,15 +79,48 @@ class PinDetailViewController: UIViewController {
 			getPhotosByLatLon()
 		} else {
 			deleteSelectedPhotos()
+			// Deselect cells. Sometimes cell selections are not cleared when done through FRC with delegate.
 			collectionView.selectItemAtIndexPath(nil, animated: false, scrollPosition: .None)
 			saveContextAndRefresh()
 			setButtonTitle()
 		}
 	}
 	
-	// MARK: - Methods
+	// MARK: - Helpers
 	
-
+	// MARK: Core Data
+	
+	// Shared Context
+	lazy var sharedContext: NSManagedObjectContext = CoreDataStackManager.sharedInstance.managedObjectContext
+	
+	// Fetched Result Controller for "Photo" entity.
+	lazy var fetchedResultsController: NSFetchedResultsController = {
+		let fetchRequest = NSFetchRequest(entityName: Photo.Keys.EntityName)
+		let sortDescriptor = NSSortDescriptor(key: Photo.Keys.Id, ascending: true)
+		fetchRequest.sortDescriptors = [sortDescriptor]
+		
+		let fetchResultController = NSFetchedResultsController(
+			fetchRequest: fetchRequest,
+			managedObjectContext: self.sharedContext,
+			sectionNameKeyPath: nil,
+			cacheName: Photo.Keys.CacheName
+		)
+		
+		return fetchResultController
+	}()
+	
+	func saveContextAndRefresh() {
+		do {
+			try CoreDataStackManager.sharedInstance.saveContext()
+		} catch let error as NSError {
+			self.showAlert(error.localizedDescription)
+		}
+		
+		sharedContext.refreshAllObjects()
+	}
+	
+	// MARK: Photo Management
+	
 	// Get JSON data for Flickr search request by Latitude and Longitude
 	// Parse data to retrieve no more than 21 records
 	func getPhotosByLatLon() {
@@ -119,9 +153,9 @@ class PinDetailViewController: UIViewController {
 						photo.location = self.pin
 					}
 					self.saveContextAndRefresh()
-					self.collectionView.reloadData()
-					self.collectionView.layoutIfNeeded()
+					
 					self.removeRefreshButton.enabled = true
+					
 					if let photos = self.pin.photos where photos.isEmpty {
 						self.noPhotosLabel.hidden = false
 						self.noPhotosLabel.textColor = .grayColor()
@@ -130,69 +164,6 @@ class PinDetailViewController: UIViewController {
 			}
 		}
 	}
-	
-	// MARK: - Configure Views
-	
-	func configureView() {
-		// collectionView Delegate and Data Source delegates are set in storyboard to PinDetailViewController
-		
-		// enable multiple cells selection
-		collectionView.allowsMultipleSelection = true
-		
-		// Switch off automatic inset on top of collectionView
-		automaticallyAdjustsScrollViewInsets = false
-		
-		// Render Map region in Pin Detail View
-		configureMapView()
-		
-		noPhotosLabel.hidden = true
-		noPhotosLabel.textColor = .whiteColor()
-		
-		removeRefreshButton.enabled = false
-		removeRefreshButton.setTitle("New Collection", forState: .Normal)
-	}
-
-	// Setup mapView region and annotation point
-	func configureMapView() {
-		guard let
-			lat = pin.valueForKey(Pin.Keys.Latitude) as? CLLocationDegrees,
-			lon = pin.valueForKey(Pin.Keys.Longitude) as? CLLocationDegrees else {
-				return
-		}
-		
-		let center = CLLocationCoordinate2D(latitude: lat, longitude: lon)
-		let region = MKCoordinateRegion(center: center, span: MKCoordinateSpan(latitudeDelta: 1.0, longitudeDelta: 1.0))
-		
-		self.mapView.setCenterCoordinate(center, animated: false)
-		self.mapView.setRegion(region, animated: false)
-		
-		let annotation = MKPointAnnotation()
-		annotation.coordinate = center
-		
-		self.mapView.addAnnotation(annotation)
-	}
-	
-	
-	// MARK: - Core Data convenience properties
-	lazy var sharedContext: NSManagedObjectContext = CoreDataStackManager.sharedInstance.managedObjectContext
-	
-	// Fetched Result Controller for "Photo" entity.
-	lazy var fetchedResultsController: NSFetchedResultsController = {
-		let fetchRequest = NSFetchRequest(entityName: Photo.Keys.EntityName)
-		let sortDescriptor = NSSortDescriptor(key: Photo.Keys.Id, ascending: true)
-		fetchRequest.sortDescriptors = [sortDescriptor]
-		
-		let fetchResultController = NSFetchedResultsController(
-			fetchRequest: fetchRequest,
-			managedObjectContext: self.sharedContext,
-			sectionNameKeyPath: nil,
-			cacheName: Photo.Keys.CacheName
-		)
-		
-		return fetchResultController
-	}()
-	
-	// MARK: - Helpers
 	
 	// Fetch photos with predicate. Get photos for respective location
 	func fetchPhotos() {
@@ -226,14 +197,45 @@ class PinDetailViewController: UIViewController {
 		}
 	}
 	
-	func saveContextAndRefresh() {
-		do {
-			try CoreDataStackManager.sharedInstance.saveContext()
-		} catch let error as NSError {
-			self.showAlert(error.localizedDescription)
+	// MARK: View
+	
+	func configureView() {
+		// collectionView Delegate and Data Source delegates are set in storyboard to PinDetailViewController
+		
+		// enable multiple cells selection
+		collectionView.allowsMultipleSelection = true
+		
+		// Switch off automatic inset on top of collectionView
+		automaticallyAdjustsScrollViewInsets = false
+		
+		// Render Map region in Pin Detail View
+		configureMapView()
+		
+		noPhotosLabel.hidden = true
+		noPhotosLabel.textColor = .whiteColor()
+		
+		removeRefreshButton.enabled = false
+		removeRefreshButton.setTitle("New Collection", forState: .Normal)
+	}
+	
+	// Setup mapView region and annotation point
+	func configureMapView() {
+		guard let
+			lat = pin.valueForKey(Pin.Keys.Latitude) as? CLLocationDegrees,
+			lon = pin.valueForKey(Pin.Keys.Longitude) as? CLLocationDegrees else {
+				return
 		}
 		
-		sharedContext.refreshAllObjects()
+		let center = CLLocationCoordinate2D(latitude: lat, longitude: lon)
+		let region = MKCoordinateRegion(center: center, span: MKCoordinateSpan(latitudeDelta: 1.0, longitudeDelta: 1.0))
+		
+		self.mapView.setCenterCoordinate(center, animated: false)
+		self.mapView.setRegion(region, animated: false)
+		
+		let annotation = MKPointAnnotation()
+		annotation.coordinate = center
+		
+		self.mapView.addAnnotation(annotation)
 	}
 	
 	func setButtonTitle() {
@@ -245,7 +247,9 @@ class PinDetailViewController: UIViewController {
 		}
 	}
 	
+	
 	// MARK: - contextDidSaveContext Observer
+	
 	func contextDidSaveContext (notification: NSNotification) {
 	}
 }

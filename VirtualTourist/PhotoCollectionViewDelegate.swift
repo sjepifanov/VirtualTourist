@@ -10,7 +10,7 @@ import UIKit
 
 extension PinDetailViewController: UICollectionViewDelegate, UICollectionViewDataSource {
 	
-	// MARK: - Delegate Methods
+	// MARK: - Photo Collection View Delegate
 	
 	func numberOfSectionsInCollectionView(collectionView: UICollectionView) -> Int {
 		// Get number of sections

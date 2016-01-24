@@ -19,15 +19,12 @@ extension ExecutableQueue {
 	func execute(closure: () -> Void) {
 		dispatch_async(queue, closure)
 	}
-	
 	func executeSync(closure: () -> Void) {
 		dispatch_sync(queue, closure)
 	}
-	
 	func barrier(closure: () -> Void) {
 		dispatch_barrier_async(queue, closure)
 	}
-	
 	func barrierSync(closure: () -> Void) {
 		dispatch_barrier_sync(queue, closure)
 	}

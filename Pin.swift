@@ -48,7 +48,7 @@ class Pin: NSManagedObject {
 }
 
 extension Pin: MKAnnotation {
-	// Conformance to MKAnnotation protocol
+	// MARK: Conformance to MKAnnotation protocol
 	var coordinate: CLLocationCoordinate2D {
 		return innerCoordinate
 	}

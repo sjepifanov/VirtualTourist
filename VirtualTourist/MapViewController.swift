@@ -77,14 +77,17 @@ class MapViewController: UIViewController {
 		case .Began:
 			managedPin = Pin(dictionary: dictionary, context: sharedContext)
 			managedPin.setCoordinate(touchMapCoordinate)
+			
 			mapView.addAnnotation(managedPin)
 			
 		case .Changed:
 			managedPin.setCoordinate(touchMapCoordinate)
 		
-		case .Ended:
+		case .Ended, .Cancelled:
+			managedPin.setCoordinate(touchMapCoordinate)
 			managedPin.setValue(touchMapCoordinate.latitude as NSNumber, forKey: Keys.Latitude)
 			managedPin.setValue(touchMapCoordinate.longitude as NSNumber, forKey: Keys.Longitude)
+			
 			// Prefetch photos for pin
 			getFlickrPhotosForPin(managedPin)
 			
@@ -244,7 +247,7 @@ class MapViewController: UIViewController {
 	
 	// Get managed object for Key by executing fetch with predicate
 	/**
-	Retrieve Pin Object from Core Data. Initialize lazy var fetchedPin: Pin with object. return nil if object not found.
+	Retrieve Pin Object from Core Data. Return nil if object not found.
 	
 	- parameters:
 		- latitude: NSNumber

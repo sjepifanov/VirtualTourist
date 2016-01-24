@@ -56,7 +56,7 @@ class Photo: NSManagedObject {
 		imageURL = "https://farm\(newFarm).staticflickr.com/\(newServer)/\(newId)_\(newSecret)_\(Keys.Size).jpg"
 	}
 	
-	private lazy var identifier: String = "\(self.id) + _ + \(self.secret) + .jpg"
+	private lazy var identifier: String = "\(self.id!)_\(self.secret!).jpg"
 	
 	// Computed image property with { get set } to retrieve/save files from/to Image Cache
 	var image: UIImage? {
