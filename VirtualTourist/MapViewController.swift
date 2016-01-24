@@ -45,10 +45,16 @@ class MapViewController: UIViewController {
 		checkConnection()
 		
 		configureView()
+		
+		mapView.delegate = self
+		
+		// Restore last saved map region using NSKeyedArchiver/Unarchiever
+		restoreMapRegion(false)
 
 		// Perform fetch of CoreData objects
-		fetchPins()
-		mapView.addAnnotations(getAnnotationsFromFetchedResuls())
+		if fetchPins() {
+			mapView.addAnnotations(getAnnotationsFromFetchedResuls())
+		}
 	}
 	
 	// MARK: - Actions
@@ -128,7 +134,11 @@ class MapViewController: UIViewController {
 		}
 	}
 	
-	// MARK: - NSKeyedArchiver and CoreData convinience properties
+	
+	// MARK: - Helpers
+	
+	
+	// MARK: Core Data
 	
 	// Managed Object Context property
 	lazy var sharedContext: NSManagedObjectContext = CoreDataStackManager.sharedInstance.managedObjectContext
@@ -150,72 +160,6 @@ class MapViewController: UIViewController {
 		return fetchedResultsController
 	}()
 	
-	
-	lazy var fetchedResultsControllerPhoto: NSFetchedResultsController = {
-		// Create the fetch request
-		let fetchRequest = NSFetchRequest(entityName: "Photo")
-		// Add a sort descriptor.
-		let sortDescriptor = NSSortDescriptor(key: Keys.Latitude, ascending: true)
-		fetchRequest.sortDescriptors = [sortDescriptor]
-		
-		// Create the Fetched Results Controller
-		let fetchedResultsController = NSFetchedResultsController(fetchRequest: fetchRequest,
-			managedObjectContext: self.sharedContext,
-			sectionNameKeyPath: nil,
-			cacheName: nil)
-		
-		return fetchedResultsController
-	}()
-	
-	// FilePath property for mapRegionArchieve file
-	lazy var filePath: String? = {
-		let manager = NSFileManager.defaultManager()
-		guard let url = manager.URLsForDirectory(.DocumentDirectory, inDomains: .UserDomainMask).first as NSURL? else {
-			return nil
-		}
-		return url.URLByAppendingPathComponent("mapRegionArchieve").path
-	}()
-	
-	
-	// MARK: - Helpers
-	
-	// Prefetch photos for location.
-	func getFlickrPhotosForPin(pin: Pin) {
-		FlickrManager.sharedInstance.getFlickrPhotoByLatLon(latitude: pin.latitude, longitude: pin.longitude) { data, error in
-			guard let data = data as? [[String : AnyObject]] else {
-				self.showAlert(error!)
-				return
-			}
-			
-			let photosDictionary = FlickrManager.sharedInstance.parsePhotosDictionary(data)
-			
-			defer {
-				Queue.Main.execute {
-					for dictionary in photosDictionary {
-						let photo = Photo(dictionary: dictionary, context: self.sharedContext)
-						photo.location = pin
-					}
-					self.saveContextAndRefresh()
-				}
-			}
-		}
-	}
-	
-	// Switch editing state and show tapPinstoDelete label
-	override func setEditing(editing: Bool, animated: Bool) {
-		super.setEditing(editing, animated: animated)
-		
-		// Show/hide TapPinstoDelete label according to editing state.
-		editing ? (tapPinstoDelete.hidden = false) : (tapPinstoDelete.hidden = true)
-
-		// Move mapView up when button appears
-		if tapPinstoDelete.hidden {
-			mapView.frame.origin.y += tapPinstoDelete.frame.height
-		} else {
-			mapView.frame.origin.y -= tapPinstoDelete.frame.height
-		}
-	}
-	
 	func saveContextAndRefresh() {
 		do {
 			try CoreDataStackManager.sharedInstance.saveContext()
@@ -225,6 +169,17 @@ class MapViewController: UIViewController {
 		
 		sharedContext.refreshAllObjects()
 	}
+
+	// MARK: NSKeyedArchierver
+	
+	// FilePath property for mapRegionArchieve file
+	lazy var filePath: String? = {
+		let manager = NSFileManager.defaultManager()
+		guard let url = manager.URLsForDirectory(.DocumentDirectory, inDomains: .UserDomainMask).first as NSURL? else {
+			return nil
+		}
+		return url.URLByAppendingPathComponent("mapRegionArchieve").path
+	}()
 	
 	// NSKeyedArchiver
 	// Save Map Region
@@ -274,6 +229,8 @@ class MapViewController: UIViewController {
 		mapView.setRegion(region, animated: animated)
 	}
 	
+	// MARK: Pin Management
+	
 	// Fetch Pins
 	func fetchPins() -> Bool {
 		NSFetchedResultsController.deleteCacheWithName(Pin.Keys.CacheName)
@@ -311,6 +268,28 @@ class MapViewController: UIViewController {
 		return pin
 	}
 	
+	// Prefetch photos for location.
+	func getFlickrPhotosForPin(pin: Pin) {
+		FlickrManager.sharedInstance.getFlickrPhotoByLatLon(latitude: pin.latitude, longitude: pin.longitude) { data, error in
+			guard let data = data as? [[String : AnyObject]] else {
+				self.showAlert(error!)
+				return
+			}
+			
+			let photosDictionary = FlickrManager.sharedInstance.parsePhotosDictionary(data)
+			
+			defer {
+				Queue.Main.execute {
+					for dictionary in photosDictionary {
+						let photo = Photo(dictionary: dictionary, context: self.sharedContext)
+						photo.location = pin
+					}
+					self.saveContextAndRefresh()
+				}
+			}
+		}
+	}
+	
 	/**
 	Delete Pin object:
 	
@@ -321,20 +300,46 @@ class MapViewController: UIViewController {
 		self.sharedContext.deleteObject(managedPin)
 	}
 	
-	func fetchPhotos() {
-		do {
-			self.fetchedResultsControllerPhoto.fetchRequest.predicate = NSPredicate(format: "location = %@", self.managedPin)
-			try self.fetchedResultsControllerPhoto.performFetch()
-		} catch {
+	func deleteCachedImageFilesAndPhoto() {
+		guard let photos = managedPin.photos where !photos.isEmpty else {
 			return
+		}
+		for photo in photos as NSArray {
+			sharedContext.deleteObject(photo as! Photo)
 		}
 	}
 	
-	func deletePinPhotos() {
-		guard let photos  = fetchedResultsControllerPhoto.fetchedObjects as? [Photo] else {
-			return
+	// MARK: View
+	
+	// Moved from ViewDidLoad section
+	func configureView() {
+		// Adding editButtonItem() to change editing state.
+		// Even though MapView does not have "editing" state the implemantation is cleaner than custom solutions.
+		navigationItem.rightBarButtonItem = editButtonItem()
+		navigationItem.backBarButtonItem = UIBarButtonItem(title: "OK", style: .Plain, target: nil, action: nil)
+		navigationItem.title = "Virtual Tourist"
+		
+		// Set initial editing mode
+		setEditing(false, animated: false)
+		
+		// Set touch and hold duration
+		longPressRecognizer.minimumPressDuration = 0.7
+		tapRecognizer.numberOfTapsRequired = 1
+	}
+	
+	// Switch editing state and show tapPinstoDelete label
+	override func setEditing(editing: Bool, animated: Bool) {
+		super.setEditing(editing, animated: animated)
+		
+		// Show/hide TapPinstoDelete label according to editing state.
+		editing ? (tapPinstoDelete.hidden = false) : (tapPinstoDelete.hidden = true)
+		
+		// Move mapView up when button appears
+		if tapPinstoDelete.hidden {
+			mapView.frame.origin.y += tapPinstoDelete.frame.height
+		} else {
+			mapView.frame.origin.y -= tapPinstoDelete.frame.height
 		}
-		photos.forEach { self.sharedContext.deleteObject($0) }
 	}
 	
 	// Create Annotations Array
@@ -343,7 +348,7 @@ class MapViewController: UIViewController {
 	Use Pin fetched results latitude and longitude to set annotations coordinates
 	
 	returns:
-		[MKPointAnnotation]
+	[MKPointAnnotation]
 	*/
 	func getAnnotationsFromFetchedResuls() -> [MKPointAnnotation] {
 		// Check if we have fetched objects, else return empty array
@@ -365,7 +370,10 @@ class MapViewController: UIViewController {
 		
 		return annotations
 	}
+
+	// MARK: Utility
 	
+	// Check Network connection.
 	func checkConnection() {
 		let connection = FlickrManager.sharedInstance.networkConnectionType(FlickrManager.Keys.HTTPS)
 		switch connection {
@@ -376,26 +384,5 @@ class MapViewController: UIViewController {
 		default:
 			break
 		}
-	}
-	
-	// Moved from ViewDidLoad section
-	func configureView() {
-		// Adding editButtonItem() to change editing state.
-		// Even though MapView does not have "editing" state the implemantation is cleaner than custom solutions.
-		navigationItem.rightBarButtonItem = editButtonItem()
-		navigationItem.backBarButtonItem = UIBarButtonItem(title: "OK", style: .Plain, target: nil, action: nil)
-		navigationItem.title = "Virtual Tourist"
-		
-		// Set initial editing mode
-		setEditing(false, animated: false)
-		
-		// Set touch and hold duration
-		longPressRecognizer.minimumPressDuration = 0.7
-		tapRecognizer.numberOfTapsRequired = 1
-		
-		mapView.delegate = self
-		
-		// Restore last saved map region using NSKeyedArchiver/Unarchiever
-		restoreMapRegion(false)
 	}
 }

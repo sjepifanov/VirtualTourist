@@ -34,7 +34,6 @@ class ImageCache {
 		if let image = inMemoryCache.objectForKey(path) as? UIImage {
 			return image
 		}
-		
 		// Next Try the hard drive
 		if let data = NSData(contentsOfFile: path) {
 			return UIImage(data: data)

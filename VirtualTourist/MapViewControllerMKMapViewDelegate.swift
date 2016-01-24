@@ -57,14 +57,13 @@ extension MapViewController: MKMapViewDelegate {
 			
 			guard let pin = fetchPin(lat, longitude: lon) else { break }
 			managedPin = pin
-			fetchPhotos()
 			
 		case .Ending:
 			let lat = annotation.coordinate.latitude as NSNumber
 			let lon = annotation.coordinate.longitude as NSNumber
 
-			// Delete Current Photos and Image files for Pin.
-			deletePinPhotos()
+			// Delete Current Photos and Image files for Pin. Update Pin.
+			deleteCachedImageFilesAndPhoto()
 			
 			managedPin.setValue(lat, forKey: Keys.Latitude)
 			managedPin.setValue(lon, forKey: Keys.Longitude)
@@ -77,7 +76,7 @@ extension MapViewController: MKMapViewDelegate {
 			break
 		}
 	}
-	
+	/*
 	func mapView(mapView: MKMapView, didSelectAnnotationView view: MKAnnotationView) {
 		view.highlighted = true
 	}
@@ -85,4 +84,5 @@ extension MapViewController: MKMapViewDelegate {
 	func mapView(mapView: MKMapView, didDeselectAnnotationView view: MKAnnotationView) {
 		view.highlighted = false
 	}
+	*/
 }
