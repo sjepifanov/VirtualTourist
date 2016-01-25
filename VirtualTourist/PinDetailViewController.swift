@@ -66,9 +66,6 @@ class PinDetailViewController: UIViewController {
 	}
 	
 	override func viewWillDisappear(animated: Bool) {
-		// Deselect selected cells when view disappears
-		collectionView.selectItemAtIndexPath(nil, animated: false, scrollPosition: .None)
-		
 		// Remove observer
 		NSNotificationCenter.defaultCenter().removeObserver(self)
 	}
@@ -82,8 +79,7 @@ class PinDetailViewController: UIViewController {
 			getPhotosByLatLon()
 		} else {
 			deleteSelectedPhotos()
-			// Deselect cells. Sometimes cell selections are not cleared when done through FRC with delegate.
-			collectionView.selectItemAtIndexPath(nil, animated: false, scrollPosition: .None)
+
 			saveContextAndRefresh()
 			setButtonTitle()
 		}
@@ -155,6 +151,7 @@ class PinDetailViewController: UIViewController {
 						let photo = Photo(dictionary: dictionary, context: self.sharedContext)
 						photo.location = self.pin
 					}
+					
 					self.saveContextAndRefresh()
 					
 					self.removeRefreshButton.enabled = true
