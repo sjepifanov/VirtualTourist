@@ -35,8 +35,7 @@ Once the images have all been downloaded, the app will enable the New Collection
 Tapping this button will empty the photo album and fetch a new set of images. Note that in locations that have a
 fairly static set of Flickr images, “new” images might overlap with previous collections of images.
 Users is able to remove photos from an album by tapping them. Pictures will flow up to fill the space vacated by
-the removed photo.
-All changes to the photo album are automatically made persistent.
+the removed photo. All changes to the photo album are automatically made persistent.
 Tapping the back button will return the user to the Map view.
 
 If the user selects a pin that already has a photo album then the Photo Album view will display the album and
